@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.js" integrity="sha256-WpOohJOqMqqyKL9FccASB9O0KwACQJpFTUBLTYOVvVU=" crossorigin="anonymous"></script>
+  <script src="chart.js"></script>
+</head>
+
+<body>
+  <div>
+    Slice by:
+    <select id="sliceBy">
+      <option value="">n/a</option>
+      <option value="channel">channel</option>
+      <option value="show">show</option>
+      <option value="date">date</option>
+    </select>
+    <button id="renderBtn" type="button">Render!</button>
+  <div>
+
+  <div id="myDiv"></div>
+
+  <script>
+    var faces;
+    init('trayvonmartin', function(data) {
+      faces = data;
+      console.log('READY');
+    });
+    $('#renderBtn').click(function() {
+      let slice_by = $('#sliceBy').val();
+      render("#myDiv", faces, slice_by);
+    });
+  </script>
+</body>
+</html>
