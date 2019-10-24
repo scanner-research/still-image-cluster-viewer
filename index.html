@@ -20,8 +20,10 @@
   <div id="myDiv"></div>
 
   <script>
+    var url = new URL(window.location.href); //No quotes for name
+    var name = url.searchParams.get("name"); //Name format: firstlast.lower()
     var faces;
-    init('trayvonmartin', function(data) { //TODO: don't hardcode name
+    init(name, function(data) { //TODO: make naming  more flexible
       faces = data;
       console.log('READY');
     });

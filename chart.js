@@ -1,4 +1,4 @@
-const VIDEO_PATH = '/videos.json'
+const VIDEO_PATH_PREFIX = '/videos/'//.json'
 const FACE_PATH_PREFIX = '/faces/'
 
 function parseVideoName(video_name) {
@@ -26,7 +26,7 @@ function parseVideoName(video_name) {
 function joinFacesWithVideos(videos, faces) {
   let video_dict = {};
   videos.forEach(v => {
-    video_dict[v.id] = parseVideoName(v.name);
+    video_dict[v[0]] = parseVideoName(v[1]); //id and name respectively
   });
   return faces.map(face => {
     return {
@@ -37,9 +37,10 @@ function joinFacesWithVideos(videos, faces) {
 }
 
 function init(person_name, callback) {
-  jQuery.getJSON(VIDEO_PATH, function(videos) {
+  jQuery.getJSON(VIDEO_PATH_PREFIX + `${person_name}.json`, function(videos) {
     jQuery.getJSON(FACE_PATH_PREFIX + `${person_name}.json`,
       function(faces) {
+	      console.log('made it');
         callback(joinFacesWithVideos(videos, faces));
       }
     );
