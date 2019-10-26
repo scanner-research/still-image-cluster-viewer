@@ -2,7 +2,17 @@
 <html>
 <head>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.js" integrity="sha256-WpOohJOqMqqyKL9FccASB9O0KwACQJpFTUBLTYOVvVU=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.15/lodash.js" integrity="sha256-kzv+r6dLqmz7iYuR2OdwUgl4X5RVsoENBzigdF5cxtU=" crossorigin="anonymous"></script>
   <script src="chart.js"></script>
+
+  <style>
+    .vblock {
+      display: inline-block;
+    }
+    .vblock span {
+      display: block;
+    }
+  </style>
 </head>
 
 <body>
@@ -20,16 +30,22 @@
   <div id="myDiv"></div>
 
   <script>
-    var url = new URL(window.location.href); //No quotes for name
-    var name = url.searchParams.get("name"); //Name format: firstlast.lower()
+    let url = new URL(window.location.href); // No quotes for name
+    var name = url.searchParams.get('name'); // Name format: firstlast.lower()
+    if (name == 'null') {
+      name = 'trayvonmartin';
+    }
+    console.log(name);
+
     var faces;
-    init(name, function(data) { //TODO: make naming  more flexible
+    init(name, function(data) { // TODO: make naming  more flexible
       faces = data;
       console.log('READY');
     });
+
     $('#renderBtn').click(function() {
       let slice_by = $('#sliceBy').val();
-      render("#myDiv", faces, slice_by);
+      render('#myDiv', faces, slice_by);
     });
   </script>
 </body>
