@@ -1,5 +1,18 @@
-const VIDEO_PATH_PREFIX = '/videos/'//.json'
+const VIDEO_PATH_PREFIX = '/videos/'
 const FACE_PATH_PREFIX = '/faces/'
+
+/* In case we ever want it
+ * function timeToMinutes (time) {
+	//convert time to mintues: hhmmss
+	var total_min = 0;
+	for (var i = 0; i < time.length; i+=2) {
+		let time_elt = time.slice(i, i+2);
+		if (i == 0) total_min+=parseInt(time_elt)/60
+		else if (i == 2) total_min+=parseInt(time_elt)
+		else total_min+=parseInt(time_elt)*60
+	}
+	return total_min;
+}*/
 
 function parseVideoName(video_name, width, height) {
   // Splits a video name into parts
@@ -82,7 +95,33 @@ function sortEntriesByValueListLen(a, b) {
 }
 
 
+function computeProportions(faces, n_clusters, k_samples_per_cluster) {
+ 	//Goal: to get proportion of clusters per slice
+	slice_section = 'channel'; //CHANGE FROM STATIC
+	let channels = ['CNN', 'MSNBC', 'FOXNEWS'];
+	if (slice_section == 'channel') {
+		let cluster_tracker = {'CNN':{}, 'FOXNEWS':{}, 'MSNBC':{}};
+		for (face in faces) {
+			let curr_channel = faces[face].video.channel;
+			var curr_cluster = faces[face].cluster_id;
+			if (curr_cluster in cluster_tracker[curr_channel]) {
+				cluster_tracker[curr_channel][curr_cluster]+=1;
+			} else {
+				cluster_tracker[curr_channel][curr_cluster]=1;
+			}
+			if ('minutes' in cluster_tracker[curr_channel]) {
+				cluster_tracker[curr_channel]['minutes'] += 3;
+			} else {
+				cluster_tracker[curr_channel]['minutes'] = 3;
+			}
+		}
+		console.log(cluster_tracker);
+	}
+	
+}
+
 function mapSliceToJQueryElements(faces, n_clusters, k_samples_per_cluster) {
+  computeProportions(faces, n_clusters, k_samples_per_cluster);
   let faces_by_cluster = {};
   faces.forEach(f => {
     let cluster_id = f.cluster_id;
