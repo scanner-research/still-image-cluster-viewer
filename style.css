@@ -1,0 +1,22 @@
+.vblock {
+  display: inline-block;
+  padding: 4px;
+}
+.vblock span {
+  display: block;
+}
+.slice-div {
+  border-style: solid;
+}
+.slice-div .title {
+  margin: 4px;
+}
+.cluster-div {
+  text-align: center;
+  padding: 4px;
+  margin: 4px;
+  border-style: dashed;
+}
+.control-div {
+  padding: 4px;
+}

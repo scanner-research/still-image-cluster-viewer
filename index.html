@@ -5,18 +5,13 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.15/lodash.js" integrity="sha256-kzv+r6dLqmz7iYuR2OdwUgl4X5RVsoENBzigdF5cxtU=" crossorigin="anonymous"></script>
   <script src="chart.js"></script>
 
-  <style>
-    .vblock {
-      display: inline-block;
-    }
-    .vblock span {
-      display: block;
-    }
-  </style>
+  <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
-  <div>
+  <div id="title-div"></div>
+
+  <div class="control-div">
     Slice by:
     <select id="sliceBy">
       <option value="">n/a</option>
@@ -25,7 +20,7 @@
       <option value="date">date</option>
     </select>
     <button id="renderBtn" type="button">Render!</button>
-  <div>
+  </div>
 
   <div id="myDiv"></div>
 
@@ -36,6 +31,8 @@
       name = 'trayvonmartin';
     }
     console.log(name);
+
+    $('#title-div').append($('<h1>').text(`Still images of ${name}`));
 
     var faces;
     init(name, function(data) { // TODO: make naming  more flexible

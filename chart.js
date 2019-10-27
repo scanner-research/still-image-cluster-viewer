@@ -1,7 +1,7 @@
 const VIDEO_PATH_PREFIX = '/videos/'//.json'
 const FACE_PATH_PREFIX = '/faces/'
 
-function parseVideoName(video_name) {
+function parseVideoName(video_name, width, height) {
   // Splits a video name into parts
   let tokens = video_name.split('_');
   var channel = tokens[0];
@@ -19,14 +19,16 @@ function parseVideoName(video_name) {
     channel: channel,
     show: show,
     date: date, // YYYYMMDD
-    time: time  // hhmmss
+    time: time, // hhmmss
+    width: width,
+    height: height
   };
 }
 
 function joinFacesWithVideos(videos, faces) {
   let video_dict = {};
   videos.forEach(v => {
-    video_dict[v[0]] = parseVideoName(v[1]); // id and name respectively
+    video_dict[v[0]] = parseVideoName(...v.slice(1)); // id and name respectively
   });
   return faces.map(face => {
     return {
@@ -52,16 +54,17 @@ const ARCHIVE_ENDPOINT ='https://ia801301.us.archive.org/0/items';
 
 
 function mapFaceToJQueryElements(face) {
-  let t0 = Math.max(face.t - 5, 0);
-  let t1 = t0 + 180;
-  let curr_time = face.t - t0;
-  return $('<div class="vblock" />').append(
-    $('<span>').text(`id: ${face.id}`),
+  let t0 = Math.max(face.t - 89, 0);
+  let t1 = t0 + 179;
+  let play_time = face.t - t0;
+  let resetPlayTime = function() { $(this)[0].currentTime = play_time; };
+  return $('<div>').addClass('vblock').append(
+    $('<span>').text(`face id: ${face.id}`),
     $('<video controls>').prop({
       src: `${ARCHIVE_ENDPOINT}/${face.video.name}/${face.video.name}.mp4?start=${t0}&end=${t1}&exact=1&ignore=x.mp4`,
-    }).attr({width: 240, height: 160}).on('loadeddata', function() {
-      $(this)[0].currentTime = curr_time;
-    })
+    }).attr(
+      {width: 240, height: 160}
+    ).on('loadeddata', resetPlayTime).on('pause', resetPlayTime)
   );
   // FIXME: archive player is imprecise with previews, so we have to use
   // unofficial API
@@ -97,7 +100,7 @@ function mapSliceToJQueryElements(faces, n_clusters, k_samples_per_cluster) {
   return faces_by_cluster_arr.slice(0, n_clusters).map(
     ([cluster_id, cluster_faces]) => {
       let sampled_faces = _.sampleSize(cluster_faces, k_samples_per_cluster);
-      return $('<div>').append(
+      return $('<div>').addClass('cluster-div').append(
         $('<h3>').text(`cluster ${cluster_id} - ${cluster_faces.length * 3}s`),
         $('<div>').append(...sampled_faces.map(mapFaceToJQueryElements))
       );
@@ -108,6 +111,8 @@ function mapSliceToJQueryElements(faces, n_clusters, k_samples_per_cluster) {
 
 // TODO: make this an argument that can be set by a html input
 const N_SLICES_TO_SHOW = 10;
+const N_CLUSTERS_TO_SHOW = 3;
+const N_VIDEOS_PER_CLUSTER = 5;
 
 
 function render(div_id, faces, slice_by) {
@@ -129,9 +134,9 @@ function render(div_id, faces, slice_by) {
       sortEntriesByValueListLen
     ).slice(0, N_SLICES_TO_SHOW).map(
       ([slice_name, slice_faces]) => {
-        return $('<div>').append(
-          $('<h1>').text(slice_name),
-          mapSliceToJQueryElements(faces, 3, 10)
+        return $('<div>').addClass('slice-div').append(
+          $('<h2>').addClass('title').text(slice_name),
+          mapSliceToJQueryElements(faces, N_CLUSTERS_TO_SHOW, N_VIDEOS_PER_CLUSTER)
         );
       }
     )
