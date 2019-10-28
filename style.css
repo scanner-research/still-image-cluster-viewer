@@ -7,6 +7,7 @@
 }
 .slice-div {
   border-style: solid;
+  margin: 2px;
 }
 .slice-div .title {
   margin: 4px;
@@ -16,8 +17,22 @@
   padding: 4px;
   margin: 4px;
   border-style: dashed;
-  background: skyblue; 
+}
+.cluster-div .video-div {
+  margin: 2px;
 }
 .control-div {
   padding: 4px;
+}
+.kv-span {
+  border-style: solid;
+  margin: 2px;
+  padding: 2px;
+}
+.kv-span .key {
+  font-weight: bold;
+  padding: 2px;
+}
+.kv-span .value {
+  padding: 2px;
 }

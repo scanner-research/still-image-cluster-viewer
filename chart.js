@@ -1,4 +1,4 @@
-const VIDEO_PATH_PREFIX = '/videos/'
+const VIDEO_PATH = '/videos.json'
 const FACE_PATH_PREFIX = '/faces/'
 
 /* In case we ever want it
@@ -53,7 +53,7 @@ function joinFacesWithVideos(videos, faces) {
 
 
 function init(person_name, callback) {
-  jQuery.getJSON(VIDEO_PATH_PREFIX + `${person_name}.json`, function(videos) {
+  jQuery.getJSON(VIDEO_PATH, function(videos) {
     jQuery.getJSON(FACE_PATH_PREFIX + `${person_name}.json`,
       function(faces) {
         callback(joinFacesWithVideos(videos, faces));
@@ -63,8 +63,14 @@ function init(person_name, callback) {
 }
 
 
-const ARCHIVE_ENDPOINT ='https://ia801301.us.archive.org/0/items';
+function mapKVToJQueryElements(key, value) {
+  return $('<span>').addClass('kv-span').append(
+    $('<span>').addClass('key').text(key),
+    $('<span>').addClass('value').text(value));
+}
 
+
+const ARCHIVE_ENDPOINT = 'https://ia801301.us.archive.org/0/items';
 
 function mapFaceToJQueryElements(face) {
   let t0 = Math.max(face.t - 89, 0);
@@ -72,12 +78,17 @@ function mapFaceToJQueryElements(face) {
   let play_time = face.t - t0;
   let resetPlayTime = function() { $(this)[0].currentTime = play_time; };
   return $('<div>').addClass('vblock').append(
-    $('<span>').text(`face id: ${face.id}`),
     $('<video controls>').prop({
       src: `${ARCHIVE_ENDPOINT}/${face.video.name}/${face.video.name}.mp4?start=${t0}&end=${t1}&exact=1&ignore=x.mp4`,
     }).attr(
       {width: 240, height: 160}
-    ).on('loadeddata', resetPlayTime).on('pause', resetPlayTime)
+    ).on('loadeddata', resetPlayTime).on('pause', resetPlayTime),
+    $('<div>').append(
+      mapKVToJQueryElements('Face id', face.id),
+      mapKVToJQueryElements('Channel', face.video.channel),
+      mapKVToJQueryElements('Show', face.video.show),
+      mapKVToJQueryElements('Date', face.video.date),
+    ),
   );
   // FIXME: archive player is imprecise with previews, so we have to use
   // unofficial API
@@ -91,37 +102,45 @@ function mapFaceToJQueryElements(face) {
 
 /* Sorts a list of [k, value list] by desending value list length */
 function sortEntriesByValueListLen(a, b) {
-  return a[1].length - b[1].length;
+  return b[1].length -  a[1].length;
 }
 
 
-function computeProportions(faces, n_clusters, k_samples_per_cluster) {
- 	//Goal: to get proportion of clusters per slice
-	slice_section = 'channel'; //CHANGE FROM STATIC
-	let channels = ['CNN', 'MSNBC', 'FOXNEWS'];
-	if (slice_section == 'channel') {
-		let cluster_tracker = {'CNN':{}, 'FOXNEWS':{}, 'MSNBC':{}};
-		for (face in faces) {
-			let curr_channel = faces[face].video.channel;
-			var curr_cluster = faces[face].cluster_id;
-			if (curr_cluster in cluster_tracker[curr_channel]) {
-				cluster_tracker[curr_channel][curr_cluster]+=1;
-			} else {
-				cluster_tracker[curr_channel][curr_cluster]=1;
-			}
-			if ('minutes' in cluster_tracker[curr_channel]) {
-				cluster_tracker[curr_channel]['minutes'] += 3;
-			} else {
-				cluster_tracker[curr_channel]['minutes'] = 3;
-			}
-		}
-		console.log(cluster_tracker);
-	}
-	
+// function computeProportions(faces, n_clusters, k_samples_per_cluster) {
+//  	//Goal: to get proportion of clusters per slice
+// 	slice_section = 'channel'; //CHANGE FROM STATIC
+// 	let channels = ['CNN', 'MSNBC', 'FOXNEWS'];
+// 	if (slice_section == 'channel') {
+// 		let cluster_tracker = {'CNN':{}, 'FOXNEWS':{}, 'MSNBC':{}};
+// 		for (face in faces) {
+// 			let curr_channel = faces[face].video.channel;
+// 			var curr_cluster = faces[face].cluster_id;
+// 			if (curr_cluster in cluster_tracker[curr_channel]) {
+// 				cluster_tracker[curr_channel][curr_cluster]+=1;
+// 			} else {
+// 				cluster_tracker[curr_channel][curr_cluster]=1;
+// 			}
+// 			if ('minutes' in cluster_tracker[curr_channel]) {
+// 				cluster_tracker[curr_channel]['minutes'] += 3;
+// 			} else {
+// 				cluster_tracker[curr_channel]['minutes'] = 3;
+// 			}
+// 		}
+// 		console.log(cluster_tracker);
+// 	}
+//
+// }
+
+
+function facesToSeconds(faces) {
+  return faces.length * 3;
 }
 
-function mapSliceToJQueryElements(faces, n_clusters, k_samples_per_cluster) {
-  computeProportions(faces, n_clusters, k_samples_per_cluster);
+
+function mapSliceToJQueryElements(
+  faces, n_clusters, k_samples_per_cluster, n_faces_in_all_slices, slice_by
+) {
+  let n_faces_in_slice = faces.length;
   let faces_by_cluster = {};
   faces.forEach(f => {
     let cluster_id = f.cluster_id;
@@ -139,9 +158,24 @@ function mapSliceToJQueryElements(faces, n_clusters, k_samples_per_cluster) {
   return faces_by_cluster_arr.slice(0, n_clusters).map(
     ([cluster_id, cluster_faces]) => {
       let sampled_faces = _.sampleSize(cluster_faces, k_samples_per_cluster);
+      let cluster_seconds = facesToSeconds(cluster_faces);
       return $('<div>').addClass('cluster-div').append(
-        $('<h3>').text(`cluster ${cluster_id} - ${cluster_faces.length * 3}s`),
-        $('<div>').append(...sampled_faces.map(mapFaceToJQueryElements))
+        $('<h3>').text(`cluster ${cluster_id}`),
+        $('<div>').append(
+          mapKVToJQueryElements(
+            'Screen time',
+            `${cluster_seconds.toLocaleString(undefined, {maximumFractionDigits: 2})} m`
+          ),
+          mapKVToJQueryElements(
+            `Percent of ${slice_by}`,
+            `${(cluster_faces.length / n_faces_in_slice * 100).toLocaleString(undefined, {maximumFractionDigits: 2})} %`
+          ),
+          mapKVToJQueryElements(
+            'Percent of total',
+            `${(cluster_faces.length / n_faces_in_all_slices * 100).toLocaleString(undefined, {maximumFractionDigits: 2})} %`
+          )
+        ),
+        $('<div>').addClass('video-div').append(...sampled_faces.map(mapFaceToJQueryElements))
       );
     }
   );
@@ -149,33 +183,62 @@ function mapSliceToJQueryElements(faces, n_clusters, k_samples_per_cluster) {
 
 
 // TODO: make this an argument that can be set by a html input
-const N_SLICES_TO_SHOW = 10;
-const N_CLUSTERS_TO_SHOW = 3;
-const N_VIDEOS_PER_CLUSTER = 5;
+const N_SLICES_TO_SHOW = 5;
+const N_CLUSTERS_TO_SHOW = 5;
+const N_VIDEOS_PER_CLUSTER = 6;
+
+
+function getSliceByReducer(video_property) {
+  return (acc, face) => {
+    let key = face.video[video_property];
+    if (acc.hasOwnProperty(key)) {
+      acc[key].push(face);
+    } else {
+      acc[key] = [face];
+    }
+    return acc;
+  }
+}
 
 
 function render(div_id, faces, slice_by) {
   $(div_id).empty();
-  console.log('Slicing by:', slice_by ? slice_by : 'none');
 
   // Do the slicing (split into groups by slice_by)
-  let slices = {'all': faces};
+  var slices;
+  if (slice_by == 'all') {
+    slices = {'all': faces};
+  } else if (slice_by == 'channel') {
+    slices = faces.reduce(getSliceByReducer('channel'), {});
+  } else if (slice_by == 'show') {
+    slices = faces.reduce(getSliceByReducer('show'), {});
+  }
 
-  // Might want to drop some groups
-  // - sort by total time
-  // - count total amount of time (normalization constants) before dropping
+  let n_faces_in_all_slices = faces.length;
 
   // Use jquery to write html with videos
-
   $(div_id).append(
     // Convert slices to JQuery objects for HTML
     ...Object.entries(slices).sort(
       sortEntriesByValueListLen
     ).slice(0, N_SLICES_TO_SHOW).map(
       ([slice_name, slice_faces]) => {
+        let slice_seconds = facesToSeconds(slice_faces);
         return $('<div>').addClass('slice-div').append(
           $('<h2>').addClass('title').text(slice_name),
-          mapSliceToJQueryElements(faces, N_CLUSTERS_TO_SHOW, N_VIDEOS_PER_CLUSTER)
+          $('<div>').append(
+            mapKVToJQueryElements(
+              'Screen time',
+              `${slice_seconds.toLocaleString(undefined, {maximumFractionDigits: 2})} m`
+            ),
+            mapKVToJQueryElements(
+              `Percent of total`,
+              `${(slice_faces.length / n_faces_in_all_slices * 100).toLocaleString(undefined, {maximumFractionDigits: 2})} %`
+            )
+          ),
+          mapSliceToJQueryElements(
+            slice_faces, N_CLUSTERS_TO_SHOW, N_VIDEOS_PER_CLUSTER,
+            n_faces_in_all_slices, slice_by)
         );
       }
     )
