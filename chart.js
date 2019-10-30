@@ -185,7 +185,7 @@ function mapSliceToJQueryElements(
 // TODO: make this an argument that can be set by a html input
 const N_SLICES_TO_SHOW = 5;
 const N_CLUSTERS_TO_SHOW = 5;
-const N_VIDEOS_PER_CLUSTER = 6;
+const N_VIDEOS_PER_CLUSTER = 2;
 
 
 function getSliceByReducer(video_property) {
