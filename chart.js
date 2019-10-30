@@ -14,7 +14,16 @@ const FACE_PATH_PREFIX = '/faces/'
 	return total_min;
 }*/
 
-function parseVideoName(video_name, width, height) {
+
+function toDecimal(n, k) {
+  if (k === undefined) {
+    k = 2;
+  }
+  return n.toLocaleString(undefined, {maximumFractionDigits: k})
+}
+
+
+function parseVideoName(video_name, width, height, fps) {
   // Splits a video name into parts
   let tokens = video_name.split('_');
   var channel = tokens[0];
@@ -34,14 +43,16 @@ function parseVideoName(video_name, width, height) {
     date: date, // YYYYMMDD
     time: time, // hhmmss
     width: width,
-    height: height
+    height: height,
+    fps: fps
   };
 }
 
 function joinFacesWithVideos(videos, faces) {
   let video_dict = {};
   videos.forEach(v => {
-    video_dict[v[0]] = parseVideoName(...v.slice(1)); // id and name respectively
+    // id, name, width, height, fps
+    video_dict[v[0]] = parseVideoName(...v.slice(1));
   });
   return faces.map(face => {
     return {
@@ -53,8 +64,8 @@ function joinFacesWithVideos(videos, faces) {
 
 
 function init(person_name, callback) {
-  jQuery.getJSON(VIDEO_PATH, function(videos) {
-    jQuery.getJSON(FACE_PATH_PREFIX + `${person_name}.json`,
+  $.get(VIDEO_PATH, function(videos) {
+    $.get(FACE_PATH_PREFIX + `${person_name}.json`,
       function(faces) {
         callback(joinFacesWithVideos(videos, faces));
       }
@@ -71,23 +82,32 @@ function mapKVToJQueryElements(key, value) {
 
 
 const ARCHIVE_ENDPOINT = 'https://ia801301.us.archive.org/0/items';
+var FRAME_SERVER_ENDPOINT;
+$.get('/frameserver.txt', function(data) {
+  FRAME_SERVER_ENDPOINT = $.trim(data);
+});
+
+const VIDEO_WIDTH = 320;
+
 
 function mapFaceToJQueryElements(face) {
-  let t0 = Math.max(face.t - 89, 0);
+  let time = face.t / face.video.fps;
+  let t0 = Math.max(time - 89, 0);
   let t1 = t0 + 179;
-  let play_time = face.t - t0;
+  let play_time = time - t0;
   let resetPlayTime = function() { $(this)[0].currentTime = play_time; };
+  let aspectRatio = face.video.width / face.video.height;
   return $('<div>').addClass('vblock').append(
-    $('<video controls>').prop({
-      src: `${ARCHIVE_ENDPOINT}/${face.video.name}/${face.video.name}.mp4?start=${t0}&end=${t1}&exact=1&ignore=x.mp4`,
-    }).attr(
-      {width: 240, height: 160}
-    ).on('loadeddata', resetPlayTime).on('pause', resetPlayTime),
-    $('<div>').append(
-      mapKVToJQueryElements('Face id', face.id),
-      mapKVToJQueryElements('Channel', face.video.channel),
-      mapKVToJQueryElements('Show', face.video.show),
-      mapKVToJQueryElements('Date', face.video.date),
+    $('<video controls>').attr({
+      preload: 'none', width: VIDEO_WIDTH, height: VIDEO_WIDTH * aspectRatio,
+      poster: `${FRAME_SERVER_ENDPOINT}/fetch?path=tvnews/videos/${face.video.name}.mp4&frame=${face.t}`,
+      src: `${ARCHIVE_ENDPOINT}/${face.video.name}/${face.video.name}.mp4?start=${t0}&end=${t1}&exact=1&ignore=x.mp4`
+    }).on('loadeddata', resetPlayTime).on('pause', resetPlayTime),
+    $('<div>').css({
+      'max-width': VIDEO_WIDTH, 'font-size': 'small'
+    }).append(
+      $('<span>').text(`face id: ${face.id}, time: ${Math.floor(time)}s`),
+      $('<span>').text(face.video.name)
     ),
   );
   // FIXME: archive player is imprecise with previews, so we have to use
@@ -102,7 +122,7 @@ function mapFaceToJQueryElements(face) {
 
 /* Sorts a list of [k, value list] by desending value list length */
 function sortEntriesByValueListLen(a, b) {
-  return b[1].length -  a[1].length;
+  return b[1].length - a[1].length;
 }
 
 
@@ -164,15 +184,15 @@ function mapSliceToJQueryElements(
         $('<div>').append(
           mapKVToJQueryElements(
             'Screen time',
-            `${cluster_seconds.toLocaleString(undefined, {maximumFractionDigits: 2})} m`
+            `${toDecimal(cluster_seconds)} m`
           ),
           mapKVToJQueryElements(
             `Percent of ${slice_by}`,
-            `${(cluster_faces.length / n_faces_in_slice * 100).toLocaleString(undefined, {maximumFractionDigits: 2})} %`
+            `${toDecimal(cluster_faces.length / n_faces_in_slice * 100)} %`
           ),
           mapKVToJQueryElements(
             'Percent of total',
-            `${(cluster_faces.length / n_faces_in_all_slices * 100).toLocaleString(undefined, {maximumFractionDigits: 2})} %`
+            `${toDecimal(cluster_faces.length / n_faces_in_all_slices * 100)} %`
           )
         ),
         $('<div>').addClass('video-div').append(...sampled_faces.map(mapFaceToJQueryElements))
@@ -185,7 +205,7 @@ function mapSliceToJQueryElements(
 // TODO: make this an argument that can be set by a html input
 const N_SLICES_TO_SHOW = 5;
 const N_CLUSTERS_TO_SHOW = 5;
-const N_VIDEOS_PER_CLUSTER = 2;
+const N_VIDEOS_PER_CLUSTER = 6;
 
 
 function getSliceByReducer(video_property) {
@@ -229,11 +249,11 @@ function render(div_id, faces, slice_by) {
           $('<div>').append(
             mapKVToJQueryElements(
               'Screen time',
-              `${slice_seconds.toLocaleString(undefined, {maximumFractionDigits: 2})} m`
+              `${toDecimal(slice_seconds)} m`
             ),
             mapKVToJQueryElements(
               `Percent of total`,
-              `${(slice_faces.length / n_faces_in_all_slices * 100).toLocaleString(undefined, {maximumFractionDigits: 2})} %`
+              `${toDecimal(slice_faces.length / n_faces_in_all_slices * 100)} %`
             )
           ),
           mapSliceToJQueryElements(
