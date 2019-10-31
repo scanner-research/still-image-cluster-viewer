@@ -204,10 +204,12 @@ function sliceFaceList(faces, slice_by) {
 
 
 function mapL1SliceToJQueryElements(
-  l1_slice_faces, slice_by_l2, min_faces_in_slice,
+  l1_slice_faces, slice_by_l2, roll_up_percentage,
   n_faces_in_total, l1_slice_name
 ) {
   let n_faces_in_l1_slice = l1_slice_faces.length;
+  let min_faces_in_l2_slice = roll_up_percentage / 100 * n_faces_in_l1_slice;
+
   let l2_slices = sliceFaceList(l1_slice_faces, slice_by_l2);
   let l2_slices_arr = Object.entries(l2_slices).sort(
     sortEntriesByValueListLen
@@ -230,45 +232,68 @@ function mapL1SliceToJQueryElements(
 
     return $('<div>').addClass('l2-slice-div').append(
       $('<div>').addClass('kv-div').append(
-        ...(
-          slice_by_l2 ? [
-            mapKVToJQueryElements(l2_slice_name),
-            mapKVToJQueryElements(
-              'Screen time',
-              `${toDecimal(l2_slice_seconds / 60)} min`
-            ),
-            mapKVToJQueryElements(
-              `Percent of "${l1_slice_name}"`,
-              `${toDecimal(l2_slice_faces.length / n_faces_in_l1_slice * 100)} %`
-            ),
-            mapKVToJQueryElements(
-              'Percent of total',
-              `${toDecimal(l2_slice_faces.length / n_faces_in_total * 100)} %`
-            ),
-            $('<button>').addClass('btn btn-secondary btn-sm toggle-l2-slice-btn').attr('type', 'button').html(BTN_EXPANDED).click(
-              function() {
-                let l2_div_elems = $(this).closest('.l2-slice-div').find(
-                  '.video-div, .more-videos-btn, .fewer-videos-btn'
+        slice_by_l2 ? [
+          mapKVToJQueryElements(l2_slice_name),
+          mapKVToJQueryElements(
+            'Screen time',
+            `${toDecimal(l2_slice_seconds / 60)} min`
+          ),
+          mapKVToJQueryElements(
+            `Percent of "${l1_slice_name}"`,
+            `${toDecimal(l2_slice_faces.length / n_faces_in_l1_slice * 100)} %`
+          ),
+          mapKVToJQueryElements(
+            'Percent of total',
+            `${toDecimal(l2_slice_faces.length / n_faces_in_total * 100)} %`
+          ),
+          $('<button>').addClass(
+            'btn btn-secondary btn-sm toggle-l2-slice-btn'
+          ).attr('type', 'button').html(BTN_HIDDEN).click(
+            function() {
+              let l2_div = $(this).closest('.l2-slice-div');
+              let video_div = l2_div.find('.video-div');
+
+              var action_is_show;
+              if (video_div.length) {
+                action_is_show = video_div.find(':visible').length == 0;
+              } else {
+                l2_div.append(
+                  $('<div>').addClass('video-div').append(sampleAndRenderVideos())
                 );
-                if (l2_div_elems.find(':visible').length) {
-                  l2_div_elems.hide();
-                  $(this).html(BTN_HIDDEN);
-                } else {
-                  l2_div_elems.show();
-                  $(this).html(BTN_EXPANDED);
-                }
+                action_is_show = true;
               }
-            )
-          ] : []
-        ),
-        $('<button>').addClass('btn btn-secondary btn-sm more-videos-btn').attr('type', 'button').text('more examples').click(
+
+              let l2_div_elems = l2_div.find(
+                '.video-div, .more-videos-btn, .fewer-videos-btn'
+              );
+              if (action_is_show) {
+                l2_div_elems.show();
+                $(this).html(BTN_EXPANDED);
+              } else {
+                l2_div_elems.hide();
+                $(this).html(BTN_HIDDEN);
+              }
+            }
+          )
+        ] : null,
+        // Load lazily if there are 2 levels of slicing
+        $('<button>').addClass(
+          'btn btn-secondary btn-sm more-videos-btn'
+        ).attr('type', 'button').css(
+          'display', slice_by_l2 ? 'none' : null
+        ).text('more examples').click(
           function() {
             $(this).closest('.l2-slice-div').find('.video-div').append(
-              ...sampleAndRenderVideos()
+              sampleAndRenderVideos()
             );
           }
         ),
-        $('<button>').addClass('btn btn-secondary btn-sm fewer-videos-btn').attr('type', 'button').text('fewer examples').click(
+        // Load lazily if there are 2 levels of slicing
+        $('<button>').addClass(
+          'btn btn-secondary btn-sm fewer-videos-btn'
+        ).attr('type', 'button').css(
+          'display', slice_by_l2 ? 'none' : null
+        ).text('fewer examples').click(
           function() {
             let k_to_keep = samplesPerRow();
             $(this).closest('.l2-slice-div').find('.video-div').find('.vblock').each(
@@ -281,15 +306,20 @@ function mapL1SliceToJQueryElements(
           }
         ),
       ),
-      $('<div>').addClass('video-div').append(...sampleAndRenderVideos())
+      // Load lazily if there are 2 levels of slicing
+      slice_by_l2 ? null : $('<div>').addClass('video-div').append(sampleAndRenderVideos())
     );
   }
 
   let non_residual_slices = l2_slices_arr.filter(
-    l2_slice => l2_slice[1].length >= min_faces_in_slice
+    l2_slice => l2_slice[1].length >= min_faces_in_l2_slice
   );
   let result = non_residual_slices.map(renderL2Slice);
-  if (l2_slices_arr.length > non_residual_slices.length) {
+  if (l2_slices_arr.length == non_residual_slices.length + 1) {
+    // Only one slice is residual
+    result.push(renderL2Slice(l2_slices_arr[non_residual_slices.length]));
+  } else if (l2_slices_arr.length > non_residual_slices.length) {
+    // Group remaining slices
     let residual_slice_faces = l2_slices_arr.slice(
       non_residual_slices.length
     ).flatMap(
@@ -302,10 +332,10 @@ function mapL1SliceToJQueryElements(
 }
 
 
-function render(div_id, faces, slice_by_l1, slice_by_l2, min_percent_of_total, start_expanded) {
+function render(div_id, faces, slice_by_l1, slice_by_l2, roll_up_percentage, start_expanded) {
   $(div_id).empty();
   let n_faces_in_total = faces.length;
-  let min_faces_in_slice = min_percent_of_total / 100 * n_faces_in_total;
+  let min_faces_in_l1_slice = roll_up_percentage / 100 * n_faces_in_total;
 
   // Do the slicing (split into groups by slice_by)
   let l1_slices = sliceFaceList(faces, slice_by_l1);
@@ -329,27 +359,38 @@ function render(div_id, faces, slice_by_l1, slice_by_l2, min_percent_of_total, s
           `Percent of total`,
           `${toDecimal(l1_slice_faces.length / n_faces_in_total * 100)} %`
         ),
-        $('<button>').addClass('btn btn-secondary btn-sm toggle-l1-slice-btn').html(BTN_EXPANDED).attr('type', 'button').click(
+        $('<button>').addClass('btn btn-secondary btn-sm toggle-l1-slice-btn').html(BTN_HIDDEN).attr('type', 'button').click(
           function() {
-            let l2_divs = $(this).closest('.l1-slice-div').find('.l2-slice-div');
-            if (l2_divs.find(':visible').length) {
-              l2_divs.hide();
-              $(this).html(BTN_HIDDEN);
+            let l1_div = $(this).closest('.l1-slice-div');
+            var l2_divs = l1_div.find('.l2-slice-div');
+
+            var action_is_show;
+            if (l2_divs.length) {
+              action_is_show = l2_divs.find(':visible').length == 0;
             } else {
+              // Lazy loading
+              l1_div.append(mapL1SliceToJQueryElements(
+                l1_slice_faces, slice_by_l2, roll_up_percentage,
+                n_faces_in_total, l1_slice_name))
+              action_is_show = true;
+            }
+
+            l2_divs = l1_div.find('.l2-slice-div');
+            if (action_is_show) {
               l2_divs.show();
               $(this).html(BTN_EXPANDED);
+            } else {
+              l2_divs.hide();
+              $(this).html(BTN_HIDDEN);
             }
           }
         ),
-      ),
-      mapL1SliceToJQueryElements(
-        l1_slice_faces, slice_by_l2, min_faces_in_slice,
-        n_faces_in_total, l1_slice_name)
+      )
     );
   };
 
   let non_residual_slices = l1_slices_arr.filter(
-    l1_slice => l1_slice[1].length >= min_faces_in_slice
+    l1_slice => l1_slice[1].length >= min_faces_in_l1_slice
   );
   function renderResidual() {
     let residual_slice_faces = l1_slices_arr.slice(non_residual_slices.length).flatMap(
@@ -363,13 +404,16 @@ function render(div_id, faces, slice_by_l1, slice_by_l2, min_percent_of_total, s
   // Use jquery to write html with videos
   $(div_id).append(
     // Convert slices to JQuery objects for HTML
-    ...non_residual_slices.map(renderL1Slice),
+    non_residual_slices.map(renderL1Slice),
     l1_slices_arr.length > non_residual_slices.length ? renderResidual() : null
   );
 
-  if (!start_expanded) {
+  if (start_expanded) {
     $('.toggle-l1-slice-btn').each(function() {
-      $(this).click(); // everything is expanded by default
+      $(this).click(); // everything is hidden by default
+    });
+    $('.toggle-l2-slice-btn').each(function() {
+      $(this).click(); // everything is hidden by default
     });
   }
 }

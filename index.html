@@ -37,7 +37,7 @@
       <option value="month">month</option>
       <option value="day">day</option>
     </select>
-    (Roll up threshold <input type="number" class="form-control" id="minPercentOfTotal" min="1" max="10" value="2.5">%.
+    (Roll up threshold <input type="number" class="form-control" id="rollUpPercentage" min="0.5" max="10" value="5" step="0.5">%.
      Start expanded? <input type="checkbox" id="startExpanded">).
     <button id="renderBtn" type="button" class="btn btn-primary">Render!</button>
   </div>
@@ -63,7 +63,7 @@
     $('#renderBtn').click(function() {
       render('#drawDiv', faces,
         $('#sliceByL1').val(), $('#sliceByL2').val(),
-        $('#minPercentOfTotal').val(), $('#startExpanded').is(':checked')
+        $('#rollUpPercentage').val(), $('#startExpanded').is(':checked')
       );
     });
 
