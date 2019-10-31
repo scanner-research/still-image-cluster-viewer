@@ -320,9 +320,7 @@ function mapL1SliceToJQueryElements(
     result.push(renderL2Slice(l2_slices_arr[non_residual_slices.length]));
   } else if (l2_slices_arr.length > non_residual_slices.length) {
     // Group remaining slices
-    let residual_slice_faces = l2_slices_arr.slice(
-      non_residual_slices.length
-    ).flatMap(
+    let residual_slice_faces = _.flatMap(l2_slices_arr.slice(non_residual_slices.length),
       ([l2_slice_name, l2_slice_faces]) => l2_slice_faces
     );
     let residual_slice_name = `Residual (${l2_slices_arr.length - non_residual_slices.length} ${slice_by_l2}s)`;
@@ -393,7 +391,7 @@ function render(div_id, faces, slice_by_l1, slice_by_l2, roll_up_percentage, sta
     l1_slice => l1_slice[1].length >= min_faces_in_l1_slice
   );
   function renderResidual() {
-    let residual_slice_faces = l1_slices_arr.slice(non_residual_slices.length).flatMap(
+    let residual_slice_faces = _.flatMap(l1_slices_arr.slice(non_residual_slices.length),
       ([l1_slice_name, l1_slice_faces]) => l1_slice_faces
     );
     let residual_slice_name = `Residual (${l1_slices_arr.length - non_residual_slices.length} ${slice_by_l1}s)`;
