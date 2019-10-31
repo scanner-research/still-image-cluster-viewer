@@ -37,7 +37,7 @@
       <option value="month">month</option>
       <option value="day">day</option>
     </select>
-    (Roll up threshold <input type="number" class="form-control" id="rollUpPercentage" min="0.5" max="10" value="5" step="0.5">%.
+    (Roll up slices smaller than <input type="number" class="form-control" id="rollUpPercentage" min="0.5" max="10" value="5" step="0.5">%.
      Start expanded? <input type="checkbox" id="startExpanded">).
     <button id="renderBtn" type="button" class="btn btn-primary">Render!</button>
   </div>
@@ -46,7 +46,7 @@
 
   <script>
     let url = new URL(window.location.href); // No quotes for name
-    var name = url.searchParams.get('name'); // Name format: firstlast.lower()
+    var name = url.searchParams.get('name'); // Format: first-last
     if (name == 'null') {
       name = 'trayvon-martin';
     }
@@ -55,7 +55,7 @@
     $('#titleDiv').append($('<h1>').text(`Still images of ${formatName(name)}`));
 
     var faces;
-    init(name, function(data) { // TODO: make naming  more flexible
+    init(name, function(data) {
       faces = data;
       console.log('Loaded static data!');
     });
