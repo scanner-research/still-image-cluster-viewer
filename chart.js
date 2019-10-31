@@ -1,5 +1,5 @@
-const VIDEO_PATH = '/videos.json'
-const FACE_PATH_PREFIX = '/faces/'
+const VIDEO_PATH = 'videos.json'
+const FACE_PATH_PREFIX = 'faces/'
 
 /* In case we ever want it
  * function timeToMinutes (time) {
@@ -83,7 +83,7 @@ function mapKVToJQueryElements(key, value) {
 
 const ARCHIVE_ENDPOINT = 'https://ia801301.us.archive.org/0/items';
 var FRAME_SERVER_ENDPOINT;
-$.get('/frameserver.txt', function(data) {
+$.get('frameserver.txt', function(data) {
   FRAME_SERVER_ENDPOINT = $.trim(data);
 });
 
