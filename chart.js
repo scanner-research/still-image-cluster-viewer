@@ -221,7 +221,7 @@ function mapL1SliceToJQueryElements(
 
     let samplesPerRow = function() {
       // FIXME: this is hacky and relies on window width and assumptions
-      return Math.floor($(window).width() * 0.9 / VIDEO_WIDTH);
+      return Math.floor(($(window).width() - 50) / VIDEO_WIDTH);
     }
 
     let sampleAndRenderVideos = function() {
