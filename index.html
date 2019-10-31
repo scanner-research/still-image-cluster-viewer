@@ -4,49 +4,65 @@
   <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
   <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.13.11/js/bootstrap-select.min.js" integrity="sha256-49+cFFN14Ib7A61zjYlhc4UnmbAPQ0uImp4Sj4JO8TU=" crossorigin="anonymous"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.js" integrity="sha256-WpOohJOqMqqyKL9FccASB9O0KwACQJpFTUBLTYOVvVU=" crossorigin="anonymous"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.15/lodash.js" integrity="sha256-kzv+r6dLqmz7iYuR2OdwUgl4X5RVsoENBzigdF5cxtU=" crossorigin="anonymous"></script>
   <script src="chart.js"></script>
 
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.13.11/css/bootstrap-select.min.css" integrity="sha256-xX+DsGeZhhgAtFGlA5iy4tpVy7wgoXKcFu13+B1qh7k=" crossorigin="anonymous">
   <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
-  <div id="title-div" class="container"></div>
+  <div id="titleDiv"></div>
 
-  <div class="container control-div">
-    Slice by:
-    <select id="sliceBy">
-      <option value="all">n/a</option>
-      <option value="channel" selected>channel</option>
+  <div id="controlDiv">
+    First, slice by
+    <select id="sliceByL1" class="selectpicker">
+      <option value="cluster" selected>cluster</option>
+      <option value="channel">channel</option>
       <option value="show">show</option>
       <option value="date">date</option>
     </select>
-    <button id="renderBtn" type="button">Render!</button>
+    (show up to <input type="number" class="form-control" id="nL1Slices" min="1" max="100" value="5">).
+    Then, slice by
+    <select id="sliceByL2" class="selectpicker">
+      <option value="" selected>-</option>
+      <option value="cluster">cluster</option>
+      <option value="channel">channel</option>
+      <option value="show">show</option>
+      <option value="date">date</option>
+    </select>
+    (show up to <input type="number" class="form-control" id="nL2Slices" min="1" max="100" value="5">).
+    (Start expanded? <input type="checkbox" id="startExpanded">).
+    <button id="renderBtn" type="button" class="btn btn-primary">Render!</button>
   </div>
 
-  <div id="myDiv" class="container"></div>
+  <div id="drawDiv"></div>
 
   <script>
     let url = new URL(window.location.href); // No quotes for name
     var name = url.searchParams.get('name'); // Name format: firstlast.lower()
     if (name == 'null') {
-      name = 'trayvonmartin';
+      name = 'trayvon-martin';
     }
     console.log(name);
 
-    $('#title-div').append($('<h1>').text(`Still images of ${name}`));
+    $('#titleDiv').append($('<h1>').text(`Still images of ${formatName(name)}`));
 
     var faces;
     init(name, function(data) { // TODO: make naming  more flexible
       faces = data;
-      console.log('READY');
+      console.log('Loaded static data!');
     });
 
     $('#renderBtn').click(function() {
-      let slice_by = $('#sliceBy').val();
-      render('#myDiv', faces, slice_by);
+      render('#drawDiv', faces,
+        $('#sliceByL1').val(), $('#sliceByL2').val(),
+        $('#nL1Slices').val(), $('#nL2Slices').val(),
+        $('#startExpanded').is(':checked')
+      );
     });
   </script>
 </body>

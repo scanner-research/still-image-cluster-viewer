@@ -5,27 +5,26 @@
 .vblock span {
   display: block;
 }
-.slice-div {
-  border-style: solid;
-  margin: 2px;
+.l1-slice-div {
+  padding: 5px;
+  margin-top: 10px;
+  margin-bottom: 10px;
 }
-.slice-div .title {
-  margin: 4px;
+.l1-slice-div .kv-div {
+  padding: 5px;
 }
-.cluster-div {
+.l2-slice-div {
+  padding: 5px;
+  margin: 5px;
+  background-color: rgba(255, 255, 255, 0.5);
+}
+.l2-slice-div .video-div {
   text-align: center;
-  padding: 4px;
-  margin: 4px;
-  border-style: dashed;
-}
-.cluster-div .video-div {
   margin: 2px;
-}
-.control-div {
-  padding: 4px;
 }
 .kv-span {
   border-style: solid;
+  background-color: white;
   margin: 2px;
   padding: 2px;
 }
@@ -35,4 +34,30 @@
 }
 .kv-span .value {
   padding: 2px;
+}
+.kv-div button {
+  margin: 2px;
+}
+#titleDiv {
+  margin-left: 20px;
+  margin-right: 20px;
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+#controlDiv {
+  margin-left: 20px;
+  margin-right: 20px;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  padding: 10px;
+}
+#controlDiv input[type="number"] {
+  width: 60px;
+  display: inline;
+}
+#drawDiv {
+  margin-left: 20px;
+  margin-right: 20px;
+  margin-top: 10px;
+  margin-bottom: 10px;
 }
