@@ -49,7 +49,7 @@ function getEasternDate(ymd, hms) {
 }
 
 
-function parseVideoName(video_name, width, height, fps) {
+function parseVideoName(video_id, video_name, width, height, fps) {
   // Splits a video name into parts
   let tokens = video_name.split('_');
   var channel = tokens[0];
@@ -64,6 +64,7 @@ function parseVideoName(video_name, width, height, fps) {
   }
   let [month, day, year] = getEasternDate(date, time).split('/');
   return {
+    id: video_id,
     name: video_name,
     channel: channel,
     show: show,
@@ -86,7 +87,7 @@ function joinFacesWithVideos(videos, faces) {
   let video_dict = videos.reduce((acc, v) => {
     if (face_video_set.has(v[0])) {
       // id, name, width, height, fps
-      acc[v[0]] = parseVideoName(...v.slice(1));
+      acc[v[0]] = parseVideoName(...v);
     }
     return acc;
   }, {});
@@ -203,6 +204,14 @@ function sliceFaceList(faces, slice_by) {
 }
 
 
+function getUniqueCountByVideoProperty(faces, video_property) {
+  return faces.reduce((acc, f) => {
+    acc.add(f.video[video_property]);
+    return acc;
+  }, new Set()).size;
+}
+
+
 function mapL1SliceToJQueryElements(
   l1_slice_faces, slice_by_l2, roll_up_percentage,
   n_faces_in_total, l1_slice_name
@@ -239,12 +248,20 @@ function mapL1SliceToJQueryElements(
             `${toDecimal(l2_slice_seconds / 60)} min`
           ),
           mapKVToJQueryElements(
-            `Percent of "${l1_slice_name}"`,
+            `Percent of "${l1_slice_name}" time`,
             `${toDecimal(l2_slice_faces.length / n_faces_in_l1_slice * 100)} %`
           ),
           mapKVToJQueryElements(
-            'Percent of total',
+            'Percent of total screen time',
             `${toDecimal(l2_slice_faces.length / n_faces_in_total * 100)} %`
+          ),
+          mapKVToJQueryElements(
+            'Number of videos',
+            getUniqueCountByVideoProperty(l2_slice_faces, 'id')
+          ),
+          mapKVToJQueryElements(
+            'Number of days',
+            getUniqueCountByVideoProperty(l2_slice_faces, 'day')
           ),
           $('<button>').addClass(
             'btn btn-secondary btn-sm toggle-l2-slice-btn'
@@ -354,8 +371,16 @@ function render(div_id, faces, slice_by_l1, slice_by_l2, roll_up_percentage, sta
           `${toDecimal(l1_slice_seconds / 60)} min`
         ),
         mapKVToJQueryElements(
-          `Percent of total`,
+          `Percent of total screen time`,
           `${toDecimal(l1_slice_faces.length / n_faces_in_total * 100)} %`
+        ),
+        mapKVToJQueryElements(
+          'Number of videos',
+          getUniqueCountByVideoProperty(l1_slice_faces, 'id')
+        ),
+        mapKVToJQueryElements(
+          'Number of days',
+          getUniqueCountByVideoProperty(l1_slice_faces, 'day')
         ),
         $('<button>').addClass('btn btn-secondary btn-sm toggle-l1-slice-btn').html(BTN_HIDDEN).attr('type', 'button').click(
           function() {
