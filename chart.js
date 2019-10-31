@@ -19,7 +19,7 @@ function toDecimal(n, k) {
   if (k === undefined) {
     k = 2;
   }
-  return n.toLocaleString(undefined, {maximumFractionDigits: k})
+  return n.toLocaleString(undefined, {maximumFractionDigits: k});
 }
 
 
