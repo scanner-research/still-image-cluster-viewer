@@ -23,7 +23,9 @@
       <option value="cluster" selected>cluster</option>
       <option value="channel">channel</option>
       <option value="show">show</option>
-      <option value="date">date</option>
+      <option value="year">year</option>
+      <option value="month">month</option>
+      <option value="day">day</option>
     </select>
     Then, slice by
     <select id="sliceByL2" class="selectpicker">
@@ -31,9 +33,11 @@
       <option value="cluster">cluster</option>
       <option value="channel">channel</option>
       <option value="show">show</option>
-      <option value="date">date</option>
+      <option value="year">year</option>
+      <option value="month">month</option>
+      <option value="day">day</option>
     </select>
-    (Minimum % of total <input type="number" class="form-control" id="minPercentOfTotal" min="0.25" max="25" value="2.5">.
+    (Roll up threshold <input type="number" class="form-control" id="minPercentOfTotal" min="1" max="10" value="2.5">%.
      Start expanded? <input type="checkbox" id="startExpanded">).
     <button id="renderBtn" type="button" class="btn btn-primary">Render!</button>
   </div>
@@ -61,6 +65,16 @@
         $('#sliceByL1').val(), $('#sliceByL2').val(),
         $('#minPercentOfTotal').val(), $('#startExpanded').is(':checked')
       );
+    });
+
+    $('input[type="number"]').change(function() {
+      let max = parseInt($(this).attr('max'));
+      let min = parseInt($(this).attr('min'));
+      if ($(this).val() > max) {
+        $(this).val(max);
+      } else if ($(this).val() < min) {
+        $(this).val(min);
+      }
     });
   </script>
 </body>

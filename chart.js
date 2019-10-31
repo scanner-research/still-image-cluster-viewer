@@ -37,8 +37,15 @@ function toDecimal(n, k) {
 }
 
 
-function reformatDate(s) {
-  return `${s.slice(4, 6)}-${s.slice(6)}-${s.slice(0, 4)}`;
+function getEasternDate(ymd, hms) {
+  let year = parseInt(ymd.slice(0, 4));
+  let month = parseInt(ymd.slice(4, 6));
+  let day = parseInt(ymd.slice(6));
+  let hour = parseInt(hms.slice(0, 2));
+  let min = parseInt(hms.slice(2, 4));
+  let sec = parseInt(hms.slice(4));
+  let date = new Date(year, month, day, hour, min, sec);
+  return date.toLocaleString('en-US', {timeZone: 'America/New_York'}).split(',')[0];
 }
 
 
@@ -55,24 +62,34 @@ function parseVideoName(video_name, width, height, fps) {
   if (tokens.length > 3) {
     show = tokens.slice(3).join('_');
   }
+  let [month, day, year] = getEasternDate(date, time).split('/');
   return {
     name: video_name,
     channel: channel,
     show: show,
-    date: reformatDate(date), // YYYYMMDD FIXME: this is UTC time
-    time: time, // hhmmss
+    year: year,
+    month: `${month}/${year}`,
+    day: `${month}/${day}/${year}`,
     width: width,
     height: height,
     fps: fps
   };
 }
 
+
 function joinFacesWithVideos(videos, faces) {
-  let video_dict = {};
-  videos.forEach(v => {
-    // id, name, width, height, fps
-    video_dict[v[0]] = parseVideoName(...v.slice(1));
-  });
+  let face_video_set = faces.reduce(
+    (acc, f) => {
+      acc.add(f.video_id);
+      return acc;
+    }, new Set());
+  let video_dict = videos.reduce((acc, v) => {
+    if (face_video_set.has(v[0])) {
+      // id, name, width, height, fps
+      acc[v[0]] = parseVideoName(...v.slice(1));
+    }
+    return acc;
+  }, {});
   return faces.map(face => {
     return {
       id: face.face_id, t: face.t, cluster_id: face.cluster_id,
@@ -179,12 +196,8 @@ function sliceFaceList(faces, slice_by) {
     slices = {'': faces};
   } else if (slice_by == 'cluster') {
     slices = faces.reduce(sliceByClusterIdReducer, {});
-  } else if (slice_by == 'channel') {
-    slices = faces.reduce(getSliceByVideoPropertyReducer('channel'), {});
-  } else if (slice_by == 'show') {
-    slices = faces.reduce(getSliceByVideoPropertyReducer('show'), {});
-  } else if (slice_by == 'date') {
-    slices = faces.reduce(getSliceByVideoPropertyReducer('date'), {});
+  } else {
+    slices = faces.reduce(getSliceByVideoPropertyReducer(slice_by), {});
   }
   return slices;
 }
