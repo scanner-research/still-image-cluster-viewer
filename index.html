@@ -25,7 +25,6 @@
       <option value="show">show</option>
       <option value="date">date</option>
     </select>
-    (show up to <input type="number" class="form-control" id="nL1Slices" min="1" max="100" value="5">).
     Then, slice by
     <select id="sliceByL2" class="selectpicker">
       <option value="" selected>-</option>
@@ -34,8 +33,8 @@
       <option value="show">show</option>
       <option value="date">date</option>
     </select>
-    (show up to <input type="number" class="form-control" id="nL2Slices" min="1" max="100" value="5">).
-    (Start expanded? <input type="checkbox" id="startExpanded">).
+    (Minimum % of total <input type="number" class="form-control" id="minPercentOfTotal" min="0.25" max="25" value="2.5">.
+     Start expanded? <input type="checkbox" id="startExpanded">).
     <button id="renderBtn" type="button" class="btn btn-primary">Render!</button>
   </div>
 
@@ -60,8 +59,7 @@
     $('#renderBtn').click(function() {
       render('#drawDiv', faces,
         $('#sliceByL1').val(), $('#sliceByL2').val(),
-        $('#nL1Slices').val(), $('#nL2Slices').val(),
-        $('#startExpanded').is(':checked')
+        $('#minPercentOfTotal').val(), $('#startExpanded').is(':checked')
       );
     });
   </script>

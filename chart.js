@@ -191,7 +191,7 @@ function sliceFaceList(faces, slice_by) {
 
 
 function mapL1SliceToJQueryElements(
-  l1_slice_faces, slice_by_l2, n_l2_slices,
+  l1_slice_faces, slice_by_l2, min_faces_in_slice,
   n_faces_in_total, l1_slice_name
 ) {
   let n_faces_in_l1_slice = l1_slice_faces.length;
@@ -272,21 +272,27 @@ function mapL1SliceToJQueryElements(
     );
   }
 
-  let result = l2_slices_arr.slice(0, n_l2_slices).map(renderL2Slice);
-  if (l2_slices_arr.length > n_l2_slices) {
-    let residual_slice_faces = l2_slices_arr.slice(n_l2_slices).flatMap(
+  let non_residual_slices = l2_slices_arr.filter(
+    l2_slice => l2_slice[1].length >= min_faces_in_slice
+  );
+  let result = non_residual_slices.map(renderL2Slice);
+  if (l2_slices_arr.length > non_residual_slices.length) {
+    let residual_slice_faces = l2_slices_arr.slice(
+      non_residual_slices.length
+    ).flatMap(
       ([l2_slice_name, l2_slice_faces]) => l2_slice_faces
     );
-    let residual_slice_name = `Residual (${l2_slices_arr.length - n_l2_slices} ${slice_by_l2}s)`;
+    let residual_slice_name = `Residual (${l2_slices_arr.length - non_residual_slices.length} ${slice_by_l2}s)`;
     result.push(renderL2Slice([residual_slice_name, residual_slice_faces]));
   }
   return result;
 }
 
 
-function render(div_id, faces, slice_by_l1, slice_by_l2, n_l1_slices, n_l2_slices, start_expanded) {
+function render(div_id, faces, slice_by_l1, slice_by_l2, min_percent_of_total, start_expanded) {
   $(div_id).empty();
   let n_faces_in_total = faces.length;
+  let min_faces_in_slice = min_percent_of_total / 100 * n_faces_in_total;
 
   // Do the slicing (split into groups by slice_by)
   let l1_slices = sliceFaceList(faces, slice_by_l1);
@@ -324,24 +330,28 @@ function render(div_id, faces, slice_by_l1, slice_by_l2, n_l1_slices, n_l2_slice
         ),
       ),
       mapL1SliceToJQueryElements(
-        l1_slice_faces, slice_by_l2, n_l2_slices,
+        l1_slice_faces, slice_by_l2, min_faces_in_slice,
         n_faces_in_total, l1_slice_name)
     );
   };
 
+  let non_residual_slices = l1_slices_arr.filter(
+    l1_slice => l1_slice[1].length >= min_faces_in_slice
+  );
   function renderResidual() {
-    let residual_slice_faces = l1_slices_arr.slice(n_l1_slices).flatMap(
+    let residual_slice_faces = l1_slices_arr.slice(non_residual_slices.length).flatMap(
       ([l1_slice_name, l1_slice_faces]) => l1_slice_faces
     );
-    let residual_slice_name = `Residual (${l1_slices_arr.length - n_l1_slices} ${slice_by_l1}s)`;
-    return renderL1Slice([residual_slice_name, residual_slice_faces], n_l1_slices);
+    let residual_slice_name = `Residual (${l1_slices_arr.length - non_residual_slices.length} ${slice_by_l1}s)`;
+    return renderL1Slice([residual_slice_name, residual_slice_faces],
+                         non_residual_slices.length);
   }
 
   // Use jquery to write html with videos
   $(div_id).append(
     // Convert slices to JQuery objects for HTML
-    ...l1_slices_arr.slice(0, n_l1_slices).map(renderL1Slice),
-    l1_slices_arr.length <= n_l1_slices ? null : renderResidual()
+    ...non_residual_slices.map(renderL1Slice),
+    l1_slices_arr.length > non_residual_slices.length ? renderResidual() : null
   );
 
   if (!start_expanded) {
