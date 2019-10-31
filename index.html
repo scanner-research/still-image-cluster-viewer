@@ -38,8 +38,7 @@
       <option value="day">day</option>
     </select>
     (Roll up slices smaller than <input type="number" class="form-control" id="rollUpPercentage" min="0.5" max="10" value="5" step="0.5">%.
-     Start expanded? <input type="checkbox" id="startExpanded">).
-    <button id="renderBtn" type="button" class="btn btn-primary">Render!</button>
+     Expand by default? <input type="checkbox" id="startExpanded">).
   </div>
 
   <div id="drawDiv"></div>
@@ -54,18 +53,23 @@
 
     $('#titleDiv').append($('<h1>').text(`Still images of ${formatName(name)}`));
 
-    var faces;
-    init(name, function(data) {
-      faces = data;
-      console.log('Loaded static data!');
-    });
-
-    $('#renderBtn').click(function() {
+    function refresh() {
       render('#drawDiv', faces,
         $('#sliceByL1').val(), $('#sliceByL2').val(),
         $('#rollUpPercentage').val(), $('#startExpanded').is(':checked')
       );
+    };
+
+    var faces;
+    init(name, function(data) {
+      faces = data;
+      console.log('Loaded static data!');
+      refresh();
     });
+
+    $('#sliceByL1, #sliceByL2, #rollUpPercentage, #startExpanded').change(
+      () => refresh()
+    );
 
     $('input[type="number"]').change(function() {
       let max = parseInt($(this).attr('max'));
