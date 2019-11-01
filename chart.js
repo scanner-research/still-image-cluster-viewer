@@ -280,9 +280,7 @@ function mapL1SliceToJQueryElements(
                 action_is_show = true;
               }
 
-              let l2_div_elems = l2_div.find(
-                '.video-div, .more-videos-btn, .fewer-videos-btn'
-              );
+              let l2_div_elems = l2_div.find('.video-div, .more-videos-btn');
               if (action_is_show) {
                 l2_div_elems.show();
                 $(this).html(BTN_EXPANDED);
@@ -302,23 +300,6 @@ function mapL1SliceToJQueryElements(
           function() {
             $(this).closest('.l2-slice-div').find('.video-div').append(
               sampleAndRenderVideos()
-            );
-          }
-        ),
-        // Load lazily if there are 2 levels of slicing
-        $('<button>').addClass(
-          'btn btn-secondary btn-sm fewer-videos-btn'
-        ).attr('type', 'button').css(
-          'display', slice_by_l2 ? 'none' : null
-        ).text('fewer examples').click(
-          function() {
-            let k_to_keep = samplesPerRow();
-            $(this).closest('.l2-slice-div').find('.video-div').find('.vblock').each(
-              function(i) {
-                if (i >= k_to_keep) {
-                  $(this).remove()
-                };
-              }
             );
           }
         ),

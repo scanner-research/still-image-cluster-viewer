@@ -21,6 +21,9 @@
 .l2-slice-div .video-div {
   text-align: center;
   margin: 2px;
+  overflow-x: scroll;
+  overflow-y: hidden;
+  white-space: nowrap;
 }
 .kv-span {
   border-style: solid;
