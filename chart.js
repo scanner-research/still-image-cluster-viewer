@@ -94,6 +94,7 @@ function joinFacesWithVideos(videos, faces) {
   return faces.map(face => {
     return {
       id: face.face_id, t: face.t, cluster_id: face.cluster_id,
+      x1: face.x1, x2: face.x2, y1: face.y1, y2: face.y2,
       video: video_dict[face.video_id]
     };
   });
@@ -124,36 +125,55 @@ $.get('frameserver.txt', function(data) {
   FRAME_SERVER_ENDPOINT = $.trim(data);
 });
 
-const VIDEO_WIDTH = 240;
+const VIDEO_HEIGHT = 160;
 
 
-function mapFaceToJQueryElements(face) {
+function getCroppedFaceCanvas(face, thumb_url) {
+  let canvas = $('<canvas>').attr({width: VIDEO_HEIGHT, height: VIDEO_HEIGHT});
+  let img = new Image();
+  img.onload = function() {
+    let face_width = Math.ceil((face.x2 - face.x1) * this.width);
+    let face_height = Math.ceil((face.y2 - face.y1) * this.height);
+    canvas[0].getContext('2d').drawImage(
+      img, face.x1 * this.width, face.y1 * this.height,
+      face_width, face_height, 0, 0, VIDEO_HEIGHT, VIDEO_HEIGHT);
+  }
+  img.src = thumb_url;
+  return canvas;
+}
+
+function getVideo(face, thumb_url) {
   let time = face.t / face.video.fps;
   let t0 = Math.max(time - 89, 0);
   let t1 = t0 + 179;
+
   let play_time = time - t0;
   let resetPlayTime = function() { $(this)[0].currentTime = play_time; };
-  let aspectRatio = face.video.width / face.video.height;
-  return $('<div>').addClass('vblock').append(
-    $('<video controls>').attr({
-      preload: 'none', width: VIDEO_WIDTH, height: VIDEO_WIDTH * aspectRatio,
-      poster: `${FRAME_SERVER_ENDPOINT}/fetch?path=tvnews/videos/${face.video.name}.mp4&frame=${face.t}`,
-      src: `${ARCHIVE_ENDPOINT}/${face.video.name}/${face.video.name}.mp4?start=${t0}&end=${t1}&exact=1&ignore=x.mp4`
-    }).on('loadeddata', resetPlayTime).on('pause', resetPlayTime),
-    $('<div>').css({
-      'max-width': VIDEO_WIDTH, 'font-size': 'x-small'
-    }).append(
-      $('<span>').css('overflow-x', 'hidden').text(face.video.name),
-      $('<span>').text(`timestamp: ${Math.floor(time)}s, face id: ${face.id}`)
-    ),
-  );
-  // FIXME: archive player is imprecise with previews, so we have to use
-  // unofficial API
-  // return $('<iframe>').prop({
-  //   src: `https://archive.org/embed/${face.video.name}?start=${t0}&end=${t1}&exact=1`,
-  //   width: 240, height: 160, frameborder: 0,
-  //   webkitallowfullscreen: true, mozallowfullscreen: true
-  // });
+
+  let aspect_ratio = face.video.width / face.video.height;
+  let video_url = `${ARCHIVE_ENDPOINT}/${face.video.name}/${face.video.name}.mp4?start=${t0}&end=${t1}&exact=1&ignore=x.mp4`;
+  return $('<video controls>').attr({
+    preload: 'none', width: VIDEO_HEIGHT / aspect_ratio, height: VIDEO_HEIGHT,
+    poster: thumb_url, src: video_url
+  }).on('loadeddata', resetPlayTime).on('pause', resetPlayTime);
+}
+
+function getFaceToJQueryElementMapper(crop_faces) {
+  return function(face) {
+    let time = face.t / face.video.fps;
+    let aspect_ratio = face.video.width / face.video.height;
+    let thumb_url = `${FRAME_SERVER_ENDPOINT}/fetch?path=tvnews/videos/${face.video.name}.mp4&frame=${face.t}`;
+    return $('<div>').addClass('vblock').append(
+      crop_faces ? getCroppedFaceCanvas(face, thumb_url) :getVideo(face, thumb_url),
+      $('<div>').css({
+        'max-width': crop_faces ? VIDEO_HEIGHT : VIDEO_HEIGHT / aspect_ratio,
+        'font-size': 'x-small'
+      }).append(
+        $('<span>').css('overflow-x', 'hidden').text(face.video.name),
+        $('<span>').text(`t: ${Math.floor(time)}s, face id: ${face.id}`)
+      ),
+    );
+  }
 }
 
 
@@ -213,8 +233,8 @@ function getUniqueCountByVideoProperty(faces, video_property) {
 
 
 function mapL1SliceToJQueryElements(
-  l1_slice_faces, slice_by_l2, roll_up_percentage,
-  n_faces_in_total, l1_slice_name
+  l1_slice_faces, slice_by_l2, roll_up_percentage, crop_faces,
+  n_faces_in_total, l1_slice_name,
 ) {
   let n_faces_in_l1_slice = l1_slice_faces.length;
   let min_faces_in_l2_slice = roll_up_percentage / 100 * n_faces_in_l1_slice;
@@ -228,15 +248,9 @@ function mapL1SliceToJQueryElements(
     let [l2_slice_name, l2_slice_faces] = l2_slice;
     let l2_slice_seconds = facesToSeconds(l2_slice_faces);
 
-    let samplesPerRow = function() {
-      // FIXME: this is hacky and relies on window width and assumptions
-      return Math.ceil(($(window).width() - VIDEO_WIDTH) / VIDEO_WIDTH);
-    }
-
     let sampleAndRenderVideos = function() {
-      let k = samplesPerRow();
-      let sampled_faces = _.sampleSize(l2_slice_faces, k);
-      return sampled_faces.map(mapFaceToJQueryElements);
+      let sampled_faces = _.sampleSize(l2_slice_faces, 10);
+      return sampled_faces.map(getFaceToJQueryElementMapper(crop_faces));
     };
 
     return $('<div>').addClass('l2-slice-div').append(
@@ -328,7 +342,8 @@ function mapL1SliceToJQueryElements(
 }
 
 
-function render(div_id, faces, slice_by_l1, slice_by_l2, roll_up_percentage, start_expanded) {
+function render(div_id, faces, slice_by_l1, slice_by_l2, roll_up_percentage,
+                crop_faces, start_expanded) {
   $(div_id).empty();
   let n_faces_in_total = faces.length;
   let min_faces_in_l1_slice = roll_up_percentage / 100 * n_faces_in_total;
@@ -363,7 +378,9 @@ function render(div_id, faces, slice_by_l1, slice_by_l2, roll_up_percentage, sta
           'Number of days',
           getUniqueCountByVideoProperty(l1_slice_faces, 'day')
         ),
-        $('<button>').addClass('btn btn-secondary btn-sm toggle-l1-slice-btn').html(BTN_HIDDEN).attr('type', 'button').click(
+        $('<button>').addClass(
+          'btn btn-secondary btn-sm toggle-l1-slice-btn'
+        ).html(BTN_HIDDEN).attr('type', 'button').click(
           function() {
             let l1_div = $(this).closest('.l1-slice-div');
             var l2_divs = l1_div.find('.l2-slice-div');
@@ -374,7 +391,7 @@ function render(div_id, faces, slice_by_l1, slice_by_l2, roll_up_percentage, sta
             } else {
               // Lazy loading
               l1_div.append(mapL1SliceToJQueryElements(
-                l1_slice_faces, slice_by_l2, roll_up_percentage,
+                l1_slice_faces, slice_by_l2, roll_up_percentage, crop_faces,
                 n_faces_in_total, l1_slice_name))
               action_is_show = true;
             }
