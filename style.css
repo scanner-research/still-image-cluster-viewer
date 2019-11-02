@@ -30,6 +30,8 @@
   background-color: white;
   margin: 2px;
   padding: 2px;
+  white-space: nowrap;
+  display: inline-block;
 }
 .kv-span .key {
   font-weight: bold;

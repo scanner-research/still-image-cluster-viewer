@@ -129,7 +129,15 @@ const VIDEO_HEIGHT = 160;
 
 
 function getCroppedFaceCanvas(face, thumb_url) {
-  let canvas = $('<canvas>').attr({width: VIDEO_HEIGHT, height: VIDEO_HEIGHT});
+  let canvas = $('<canvas>').attr(
+    {width: VIDEO_HEIGHT, height: VIDEO_HEIGHT, title: 'Click for video!'}
+  ).click(function() {
+    let aspect_ratio = face.video.width / face.video.height;
+    let vblock = canvas.closest('.vblock');
+    vblock.prepend(getVideo(face, thumb_url));
+    vblock.find('.vinfo').css('max-width', VIDEO_HEIGHT / aspect_ratio);
+    canvas.remove();
+  });
   let img = new Image();
   img.onload = function() {
     let face_width = Math.ceil((face.x2 - face.x1) * this.width);
@@ -141,6 +149,7 @@ function getCroppedFaceCanvas(face, thumb_url) {
   img.src = thumb_url;
   return canvas;
 }
+
 
 function getVideo(face, thumb_url) {
   let time = face.t / face.video.fps;
@@ -158,6 +167,7 @@ function getVideo(face, thumb_url) {
   }).on('loadeddata', resetPlayTime).on('pause', resetPlayTime);
 }
 
+
 function getFaceToJQueryElementMapper(crop_faces) {
   return function(face) {
     let time = face.t / face.video.fps;
@@ -165,7 +175,7 @@ function getFaceToJQueryElementMapper(crop_faces) {
     let thumb_url = `${FRAME_SERVER_ENDPOINT}/fetch?path=tvnews/videos/${face.video.name}.mp4&frame=${face.t}`;
     return $('<div>').addClass('vblock').append(
       crop_faces ? getCroppedFaceCanvas(face, thumb_url) :getVideo(face, thumb_url),
-      $('<div>').css({
+      $('<div>').addClass('vinfo').css({
         'max-width': crop_faces ? VIDEO_HEIGHT : VIDEO_HEIGHT / aspect_ratio,
         'font-size': 'x-small'
       }).append(
