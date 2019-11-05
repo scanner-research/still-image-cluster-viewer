@@ -112,10 +112,13 @@ function init(person_name, callback) {
 }
 
 
-function mapKVToJQueryElements(key, value) {
+function mapKVToJQueryElements(key, value, name) {
   return $('<span>').addClass('kv-span').append(
     $('<span>').addClass('key').text(key),
-    value ? $('<span>').addClass('value').text(value) : null);
+    value ? $('<span>').addClass('value').attr(
+      name ? {name: name} : {}
+    ).text(value) : null
+  );
 }
 
 
@@ -263,6 +266,8 @@ function mapL1SliceToJQueryElements(
       return sampled_faces.map(getFaceToJQueryElementMapper(crop_faces));
     };
 
+    let init_sample = sampleAndRenderVideos();
+
     return $('<div>').addClass('l2-slice-div').append(
       $('<div>').addClass('kv-div').append(
         slice_by_l2 ? [
@@ -287,6 +292,9 @@ function mapL1SliceToJQueryElements(
             'Number of days',
             getUniqueCountByVideoProperty(l2_slice_faces, 'day')
           ),
+          mapKVToJQueryElements(
+            'Number of samples', init_sample.length, 'n-samples-value'
+          ),
           $('<button>').addClass(
             'btn btn-secondary btn-sm toggle-l2-slice-btn'
           ).attr('type', 'button').html(BTN_HIDDEN).click(
@@ -299,7 +307,7 @@ function mapL1SliceToJQueryElements(
                 action_is_show = video_div.find(':visible').length == 0;
               } else {
                 l2_div.append(
-                  $('<div>').addClass('video-div').append(sampleAndRenderVideos())
+                  $('<div>').addClass('video-div').append(init_sample)
                 );
                 action_is_show = true;
               }
@@ -322,14 +330,17 @@ function mapL1SliceToJQueryElements(
           'display', slice_by_l2 ? 'none' : null
         ).text('more examples').click(
           function() {
-            $(this).closest('.l2-slice-div').find('.video-div').append(
-              sampleAndRenderVideos()
+            let l2_div = $(this).closest('.l2-slice-div');
+            let video_div = l2_div.find('.video-div');
+            video_div.append(sampleAndRenderVideos());
+            l2_div.find('[name="n-samples-value"]').text(
+              video_div.find('.vblock').length
             );
           }
         ),
       ),
       // Load lazily if there are 2 levels of slicing
-      slice_by_l2 ? null : $('<div>').addClass('video-div').append(sampleAndRenderVideos())
+      slice_by_l2 ? null : $('<div>').addClass('video-div').append(init_sample)
     );
   }
 
