@@ -377,8 +377,12 @@ function mapL1SliceToJQueryElements(
 function renderBarChart(faces) {
   let slice_times = faces.map(
     ([slice_name, slice_faces]) => [slice_name, facesToSeconds(slice_faces)]);
-  // FIXME: implement this with a bar chart
-  return $('<span>').text(JSON.stringify(slice_times));
+  return $('<div>').addClass('vega-chart').on('render', function() {
+    let vega_div = $(this);
+    // FIXME: implement this with a bar chart
+    console.log('Rendering bar chart');
+    vega_div.text(JSON.stringify(slice_times));
+  });
 }
 
 
@@ -487,4 +491,6 @@ function render(div_id, faces, slice_by_l1, slice_by_l2, roll_up_percentage,
       $(this).click(); // everything is hidden by default
     });
   }
+
+  $('.vega-chart').trigger('render');
 }
