@@ -347,19 +347,38 @@ function mapL1SliceToJQueryElements(
   let non_residual_slices = l2_slices_arr.filter(
     l2_slice => l2_slice[1].length >= min_faces_in_l2_slice
   );
-  let result = non_residual_slices.map(renderL2Slice);
+  var residual_slice = null;
   if (l2_slices_arr.length == non_residual_slices.length + 1) {
     // Only one slice is residual
-    result.push(renderL2Slice(l2_slices_arr[non_residual_slices.length]));
+    residual_slice = l2_slices_arr[non_residual_slices.length];
   } else if (l2_slices_arr.length > non_residual_slices.length) {
-    // Group remaining slices
+    // Roll up the remaining slices
     let residual_slice_faces = _.flatMap(l2_slices_arr.slice(non_residual_slices.length),
       ([l2_slice_name, l2_slice_faces]) => l2_slice_faces
     );
     let residual_slice_name = `Residual (${l2_slices_arr.length - non_residual_slices.length} ${slice_by_l2}s)`;
-    result.push(renderL2Slice([residual_slice_name, residual_slice_faces]));
+    residual_slice = [residual_slice_name, residual_slice_faces];
+  }
+  let result = [];
+  if (slice_by_l2) {
+    result.push($('<div>').addClass('l2-bar-chart-div').append(
+      renderBarChart(residual_slice ?
+        non_residual_slices.concat([residual_slice]) : non_residual_slices)
+    ));
+  }
+  non_residual_slices.map(renderL2Slice).forEach(x => result.push(x));
+  if (residual_slice) {
+    result.push(renderL2Slice(residual_slice));
   }
   return result;
+}
+
+
+function renderBarChart(faces) {
+  let slice_times = faces.map(
+    ([slice_name, slice_faces]) => [slice_name, facesToSeconds(slice_faces)]);
+  // FIXME: implement this with a bar chart
+  return $('<span>').text(JSON.stringify(slice_times));
 }
 
 
@@ -434,20 +453,30 @@ function render(div_id, faces, slice_by_l1, slice_by_l2, roll_up_percentage,
   let non_residual_slices = l1_slices_arr.filter(
     l1_slice => l1_slice[1].length >= min_faces_in_l1_slice
   );
-  function renderResidual() {
-    let residual_slice_faces = _.flatMap(l1_slices_arr.slice(non_residual_slices.length),
+  var residual_slice = null;
+  if (l1_slices_arr.length == non_residual_slices.length + 1) {
+    // Only one slice is residual
+    non_residual_slices.push(l1_slices_arr[non_residual_slices.length]);
+  } else if (l1_slices_arr.length > non_residual_slices.length) {
+    // Roll up the remaining slices
+    let residual_slice_faces = _.flatMap(
+      l1_slices_arr.slice(non_residual_slices.length),
       ([l1_slice_name, l1_slice_faces]) => l1_slice_faces
     );
     let residual_slice_name = `Residual (${l1_slices_arr.length - non_residual_slices.length} ${slice_by_l1}s)`;
-    return renderL1Slice([residual_slice_name, residual_slice_faces],
-                         non_residual_slices.length);
+    residual_slice = [residual_slice_name, residual_slice_faces];
   }
 
   // Use jquery to write html with videos
   $(div_id).append(
     // Convert slices to JQuery objects for HTML
+    $('<div>').addClass('l1-bar-chart-div').append(
+      renderBarChart(residual_slice ?
+        non_residual_slices.concat([residual_slice]) : non_residual_slices
+    )),
     non_residual_slices.map(renderL1Slice),
-    l1_slices_arr.length > non_residual_slices.length ? renderResidual() : null
+    residual_slice ?
+      renderL1Slice(residual_slice, non_residual_slices.length) : null
   );
 
   if (start_expanded) {
