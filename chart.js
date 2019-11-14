@@ -8,7 +8,8 @@ const DEFAULT_COLORS = [
   '#4E79A7', '#F28E2B', '#E15759', '#76B7B2', '#59A14F',
   '#EDC948', '#B07AA1', '#FF9DA7', '#9C755F', '#BAB0AC'
 ];
-
+const WIDTH_VEGA_CHART = 800;
+const HEIGHT_VEGA_CHART = 200;
 
 function formatName(s) {
   return s.split('-').map(t => t.slice(0, 1).toUpperCase() + t.slice(1)).join(' ');
@@ -362,7 +363,8 @@ function mapL1SliceToJQueryElements(
   let result = [];
   if (slice_by_l2) {
     result.push($('<div>').addClass('l2-bar-chart-div').append(
-      renderBarChart(residual_slice ?
+      renderBarChart(
+        `l2VegaDiv${l1_slice_name}`, residual_slice ?
         non_residual_slices.concat([residual_slice]) : non_residual_slices)
     ));
   }
@@ -374,15 +376,63 @@ function mapL1SliceToJQueryElements(
 }
 
 
-function renderBarChart(faces) {
+function renderBarChart(div_id, faces) {
+  let face_count = faces.reduce((acc, x) => acc + x[1].length, 0);
   let slice_times = faces.map(
-    ([slice_name, slice_faces]) => [slice_name, facesToSeconds(slice_faces)]);
-  return $('<div>').addClass('vega-chart').on('render', function() {
-    let vega_div = $(this);
-    // FIXME: implement this with a bar chart
-    console.log('Rendering bar chart');
-    vega_div.text(JSON.stringify(slice_times));
-  });
+    ([slice_name, slice_faces], i) => {
+      let percent = slice_faces.length/face_count * 100;
+      let percent_str = `${percent.toLocaleString(undefined, {maximumFractionDigits: 2})}%`;
+      return {
+        name: slice_name, 
+        value: facesToSeconds(slice_faces)/60, 
+        percent: percent_str,
+        color: DEFAULT_COLORS[i%DEFAULT_COLORS.length]
+      };
+    });
+  console.log('times', slice_times);
+  return $('<div>').addClass('vega-chart').attr('id', div_id).on(
+    'render', function() {
+      let vega_div = $(this);
+      // FIXME: implement this with a bar chart
+      console.log('Rendering bar chart');
+      //vega_div.text(JSON.stringify(slice_times));
+      let vl_spec = {
+        $schema: "https://vega.github.io/schema/vega-lite/v4.json",
+        width: WIDTH_VEGA_CHART,
+        height: HEIGHT_VEGA_CHART,
+        data: {
+          values: slice_times
+        },
+        "layer": [{ //add sort & take away string quotes
+          "mark": "bar",
+          "encoding": {
+            "x": {
+              "field": "name", "type": "ordinal",
+              "axis": {"title": null, "labelAngle": 0},
+               sort: {field:"value", op: "count", order:"ascending"} //FIGURE OUT SORT
+            },
+            "y": {
+              "field": "value", "type": "quantitative", "title": "Minutes" 
+
+            },
+            "color": {"field": "color", "type": "nominal", "legend": null}
+          }
+        }, {
+          "mark": {
+            "type": "text",
+            "baseline": "top",
+            "dy": -12
+          },
+          "encoding": {
+            "x": {"field": "name", "type": "nominal"},
+            "y": {"field": "value", "type": "quantitative"},
+            "text": {"field": "percent", "type": "nominal"}
+          }
+        }]
+      };
+      vegaEmbed(`#${div_id}`, vl_spec);
+    }
+  );
 }
 
 
@@ -475,7 +525,8 @@ function render(div_id, faces, slice_by_l1, slice_by_l2, roll_up_percentage,
   $(div_id).append(
     // Convert slices to JQuery objects for HTML
     $('<div>').addClass('l1-bar-chart-div').append(
-      renderBarChart(residual_slice ?
+      renderBarChart(
+        'l1VegaDiv', residual_slice ?
         non_residual_slices.concat([residual_slice]) : non_residual_slices
     )),
     non_residual_slices.map(renderL1Slice),

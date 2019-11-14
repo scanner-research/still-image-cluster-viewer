@@ -10,6 +10,9 @@
   <script src="https://cdn.jsdelivr.net/npm/vega@5.7.3"></script>
   <script src="https://cdn.jsdelivr.net/npm/vega-lite@4.0.0-beta.11"></script>
   <script src="https://cdn.jsdelivr.net/npm/vega-embed@6.0.0"></script>
+<!--   <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
+<script src="https://cdn.jsdelivr.net/npm/vega-lite@4"></script>
+<script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script> -->
   <script src="chart.js"></script>
 
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
@@ -75,7 +78,7 @@
       console.log('Loaded static data!');
       refresh();
     });
-
+    console.log('faces', faces);
     $('.control').change(
       () => refresh()
     );

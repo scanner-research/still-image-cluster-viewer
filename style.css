@@ -15,14 +15,21 @@
   margin-top: 10px;
   margin-bottom: 10px;
   background-color: rgba(0, 0, 0, 0.1);
+  text-align: center;
 }
 .l1-slice-div .kv-div {
   padding: 5px;
 }
-.l2-slice-div, .l2-bar-chart-div  {
+.l2-slice-div {
   padding: 5px;
   margin: 5px;
   background-color: rgba(255, 255, 255, 0.5);
+}
+.l2-bar-chart-div {
+  padding: 5px;
+  margin: 5px;
+  background-color: rgba(255, 255, 255, 0.5);
+  text-align: center;
 }
 .l2-slice-div .video-div {
   text-align: center;
