@@ -11,6 +11,7 @@ const DEFAULT_COLORS = [
 const WIDTH_VEGA_CHART = 800;
 const HEIGHT_VEGA_CHART = 200;
 
+
 function formatName(s) {
   return s.split('-').map(t => t.slice(0, 1).toUpperCase() + t.slice(1)).join(' ');
 }
@@ -246,12 +247,9 @@ function getUniqueCountByVideoProperty(faces, video_property) {
 }
 
 
-function mapL1SliceToJQueryElements(
-  l1_slice_faces, slice_by_l2, roll_up_percentage, crop_faces,
-  n_faces_in_total, l1_slice_name,
-) {
+function mapL1SliceToJQueryElements(l1_slice_faces, slice_by_l2, options) {
   let n_faces_in_l1_slice = l1_slice_faces.length;
-  let min_faces_in_l2_slice = roll_up_percentage / 100 * n_faces_in_l1_slice;
+  let min_faces_in_l2_slice = options.roll_up_percentage / 100 * n_faces_in_l1_slice;
 
   let l2_slices = sliceFaceList(l1_slice_faces, slice_by_l2);
   let l2_slices_arr = Object.entries(l2_slices).sort(
@@ -264,7 +262,7 @@ function mapL1SliceToJQueryElements(
 
     let sampleAndRenderVideos = function() {
       let sampled_faces = _.sampleSize(l2_slice_faces, 10);
-      return sampled_faces.map(getFaceToJQueryElementMapper(crop_faces));
+      return sampled_faces.map(getFaceToJQueryElementMapper(options.crop_faces));
     };
 
     let init_sample = sampleAndRenderVideos();
@@ -278,12 +276,12 @@ function mapL1SliceToJQueryElements(
             `${toDecimal(l2_slice_seconds / 60)} min`
           ),
           mapKVToJQueryElements(
-            `Percent of "${l1_slice_name}" time`,
+            `Percent of "${options.l1_slice_name}" time`,
             `${toDecimal(l2_slice_faces.length / n_faces_in_l1_slice * 100)} %`
           ),
           mapKVToJQueryElements(
             'Percent of total screen time',
-            `${toDecimal(l2_slice_faces.length / n_faces_in_total * 100)} %`
+            `${toDecimal(l2_slice_faces.length / options.n_faces_in_total * 100)} %`
           ),
           mapKVToJQueryElements(
             'Number of videos',
@@ -348,24 +346,29 @@ function mapL1SliceToJQueryElements(
   let non_residual_slices = l2_slices_arr.filter(
     l2_slice => l2_slice[1].length >= min_faces_in_l2_slice
   );
+  let nr_slices_len = non_residual_slices.length;
   var residual_slice = null;
-  if (l2_slices_arr.length == non_residual_slices.length + 1) {
+  if (l2_slices_arr.length == nr_slices_len + 1) {
     // Only one slice is residual
-    residual_slice = l2_slices_arr[non_residual_slices.length];
-  } else if (l2_slices_arr.length > non_residual_slices.length) {
+    residual_slice = l2_slices_arr[nr_slices_len];
+  } else if (l2_slices_arr.length > nr_slices_len) {
     // Roll up the remaining slices
-    let residual_slice_faces = _.flatMap(l2_slices_arr.slice(non_residual_slices.length),
+    let residual_slice_faces = _.flatMap(
+      l2_slices_arr.slice(nr_slices_len),
       ([l2_slice_name, l2_slice_faces]) => l2_slice_faces
     );
-    let residual_slice_name = `Residual (${l2_slices_arr.length - non_residual_slices.length} ${slice_by_l2}s)`;
+    let residual_slice_name = `Residual (${l2_slices_arr.length - nr_slices_len} ${slice_by_l2}s)`;
     residual_slice = [residual_slice_name, residual_slice_faces];
   }
   let result = [];
   if (slice_by_l2) {
+    let bar_chart_data = residual_slice ?
+      non_residual_slices.concat([residual_slice]) : non_residual_slices;
     result.push($('<div>').addClass('l2-bar-chart-div').append(
       renderBarChart(
-        `l2VegaDiv${l1_slice_name}`, residual_slice ?
-        non_residual_slices.concat([residual_slice]) : non_residual_slices)
+        `l2VegaDiv-${options.l1_slice_name.replace(/[^a-zA-Z0-9]/g, '')}`,
+        bar_chart_data.map(x => x.concat([options.l1_slice_color]))
+      )
     ));
   }
   non_residual_slices.map(renderL2Slice).forEach(x => result.push(x));
@@ -379,17 +382,18 @@ function mapL1SliceToJQueryElements(
 function renderBarChart(div_id, faces) {
   let face_count = faces.reduce((acc, x) => acc + x[1].length, 0);
   let slice_times = faces.map(
-    ([slice_name, slice_faces], i) => {
+    ([slice_name, slice_faces, slice_color], i) => {
       let percent = slice_faces.length/face_count * 100;
       let percent_str = `${percent.toLocaleString(undefined, {maximumFractionDigits: 2})}%`;
       return {
-        name: slice_name, 
-        value: facesToSeconds(slice_faces)/60, 
+        name: slice_name,
+        value: facesToSeconds(slice_faces) / 60,
         percent: percent_str,
-        color: DEFAULT_COLORS[i%DEFAULT_COLORS.length]
+        color: slice_color
       };
-    });
-  console.log('times', slice_times);
+    }
+  );
+
   return $('<div>').addClass('vega-chart').attr('id', div_id).on(
     'render', function() {
       let vega_div = $(this);
@@ -397,38 +401,26 @@ function renderBarChart(div_id, faces) {
       console.log('Rendering bar chart');
       //vega_div.text(JSON.stringify(slice_times));
       let vl_spec = {
-        $schema: "https://vega.github.io/schema/vega-lite/v4.json",
+        $schema: 'https://vega.github.io/schema/vega-lite/v4.json',
         width: WIDTH_VEGA_CHART,
         height: HEIGHT_VEGA_CHART,
+        background: null,
         data: {
           values: slice_times
         },
-        "layer": [{ //add sort & take away string quotes
-          "mark": "bar",
-          "encoding": {
-            "x": {
-              "field": "name", "type": "ordinal",
-              "axis": {"title": null, "labelAngle": 0},
-               sort: {field:"value", op: "count", order:"ascending"} //FIGURE OUT SORT
-            },
-            "y": {
-              "field": "value", "type": "quantitative", "title": "Minutes" 
-
-            },
-            "color": {"field": "color", "type": "nominal", "legend": null}
-          }
-        }, {
-          "mark": {
-            "type": "text",
-            "baseline": "top",
-            "dy": -12
+        mark: 'bar',
+        encoding: {
+          x: {
+            field: 'name', type: 'nominal',
+            axis: {title: null, labelAngle: 0},
+            sort: '-y'
           },
-          "encoding": {
-            "x": {"field": "name", "type": "nominal"},
-            "y": {"field": "value", "type": "quantitative"},
-            "text": {"field": "percent", "type": "nominal"}
-          }
-        }]
+          y: {
+            field: 'value', type: 'quantitative', title: 'Minutes'
+          },
+          color: {field: 'color', legend: null, scale: null},
+          tooltip: {field: 'percent', type: 'nominal'}
+        }
       };
       vegaEmbed(`#${div_id}`, vl_spec);
     }
@@ -449,10 +441,10 @@ function render(div_id, faces, slice_by_l1, slice_by_l2, roll_up_percentage,
   );
 
   function renderL1Slice(l1_slice, i) {
-    let [l1_slice_name, l1_slice_faces] = l1_slice;
+    let [l1_slice_name, l1_slice_faces, l1_slice_color] = l1_slice;
     let l1_slice_seconds = facesToSeconds(l1_slice_faces);
     return $('<div>').addClass('l1-slice-div').css(
-      'background-color', convertHex(getColor(i), 0.5)
+      'background-color', convertHex(l1_slice_color, 0.5)
     ).append(
       $('<div>').addClass('kv-div').append(
         mapKVToJQueryElements(l1_slice_name),
@@ -485,8 +477,13 @@ function render(div_id, faces, slice_by_l1, slice_by_l2, roll_up_percentage,
             } else {
               // Lazy loading
               l1_div.append(mapL1SliceToJQueryElements(
-                l1_slice_faces, slice_by_l2, roll_up_percentage, crop_faces,
-                n_faces_in_total, l1_slice_name))
+                l1_slice_faces, slice_by_l2, {
+                  roll_up_percentage: roll_up_percentage,
+                  crop_faces: crop_faces,
+                  n_faces_in_total: n_faces_in_total,
+                  l1_slice_name: l1_slice_name,
+                  l1_slice_color: l1_slice_color
+                }));
               action_is_show = true;
             }
 
@@ -506,19 +503,24 @@ function render(div_id, faces, slice_by_l1, slice_by_l2, roll_up_percentage,
 
   let non_residual_slices = l1_slices_arr.filter(
     l1_slice => l1_slice[1].length >= min_faces_in_l1_slice
-  );
+  ).map((x, i) => x.concat([getColor(i)]));
+  let nr_slices_len = non_residual_slices.length;
   var residual_slice = null;
-  if (l1_slices_arr.length == non_residual_slices.length + 1) {
+  if (l1_slices_arr.length == nr_slices_len + 1) {
     // Only one slice is residual
-    non_residual_slices.push(l1_slices_arr[non_residual_slices.length]);
-  } else if (l1_slices_arr.length > non_residual_slices.length) {
+    non_residual_slices.push(
+      l1_slices_arr[nr_slices_len].concat(getColor(nr_slices_len)));
+  } else if (l1_slices_arr.length > nr_slices_len) {
     // Roll up the remaining slices
     let residual_slice_faces = _.flatMap(
-      l1_slices_arr.slice(non_residual_slices.length),
+      l1_slices_arr.slice(nr_slices_len),
       ([l1_slice_name, l1_slice_faces]) => l1_slice_faces
     );
-    let residual_slice_name = `Residual (${l1_slices_arr.length - non_residual_slices.length} ${slice_by_l1}s)`;
-    residual_slice = [residual_slice_name, residual_slice_faces];
+    let residual_slice_name = `Residual (${l1_slices_arr.length - nr_slices_len} ${slice_by_l1}s)`;
+    residual_slice = [
+      residual_slice_name, residual_slice_faces,
+      getColor(nr_slices_len)
+    ];
   }
 
   // Use jquery to write html with videos
@@ -531,7 +533,7 @@ function render(div_id, faces, slice_by_l1, slice_by_l2, roll_up_percentage,
     )),
     non_residual_slices.map(renderL1Slice),
     residual_slice ?
-      renderL1Slice(residual_slice, non_residual_slices.length) : null
+      renderL1Slice(residual_slice, nr_slices_len) : null
   );
 
   if (start_expanded) {
