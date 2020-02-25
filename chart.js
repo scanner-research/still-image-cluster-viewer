@@ -12,6 +12,14 @@ const WIDTH_VEGA_CHART = 800;
 const HEIGHT_VEGA_CHART = 200;
 
 
+String.prototype.lpad = function(padString, length) {
+    var str = this;
+    while (str.length < length)
+        str = padString + str;
+    return str;
+}
+
+
 function formatName(s) {
   return s.split('-').map(t => t.slice(0, 1).toUpperCase() + t.slice(1)).join(' ');
 }
@@ -75,7 +83,9 @@ function parseVideoName(video_id, video_name, width, height, fps) {
     day: `${month}/${day}/${year}`,
     width: width,
     height: height,
-    fps: fps
+    fps: fps,
+    yyyymmdd: `${year}`.lpad('0', 4) + '-' +  `${month}`.lpad('0', 2) + '-'
+               + `${day}`.lpad('0', 2)
   };
 }
 
@@ -428,8 +438,8 @@ function renderBarChart(div_id, faces) {
 }
 
 
-function render(div_id, faces, slice_by_l1, slice_by_l2, roll_up_percentage,
-                crop_faces, start_expanded) {
+function render(div_id, faces, slice_by_l1, slice_by_l2,
+                roll_up_percentage, crop_faces, start_expanded) {
   $(div_id).empty();
   let n_faces_in_total = faces.length;
   let min_faces_in_l1_slice = roll_up_percentage / 100 * n_faces_in_total;

@@ -10,9 +10,6 @@
   <script src="https://cdn.jsdelivr.net/npm/vega@5.7.3"></script>
   <script src="https://cdn.jsdelivr.net/npm/vega-lite@4.0.0-beta.11"></script>
   <script src="https://cdn.jsdelivr.net/npm/vega-embed@6.0.0"></script>
-<!--   <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
-<script src="https://cdn.jsdelivr.net/npm/vega-lite@4"></script>
-<script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script> -->
   <script src="chart.js"></script>
 
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
@@ -42,10 +39,12 @@
       <option value="year">year</option>
       <option value="month">month</option>
       <option value="day">day</option>
-    </select>
+    </select>.
+    Max date
+    <input type="date" id="maxDate" class='control' value="2020-01-01">.
     (Roll up slices smaller than
       <input type="number" class="form-control control" id="rollUpPercentage"
-       min="0" max="10" value="5" step="0.5">%.
+       min="0" max="10" value="1" step="0.5">%.
      Crop faces
       <input type="checkbox" class="control" id="cropFaces" checked>?
      Expand slices
@@ -65,7 +64,8 @@
     $('#titleDiv').append($('<h1>').text(`Still images of ${formatName(name)}`));
 
     function refresh() {
-      render('#drawDiv', faces,
+      let max_yyyymmdd = $('#maxDate').val();
+      render('#drawDiv', faces.filter(f => f.video.yyyymmdd <= max_yyyymmdd),
         $('#sliceByL1').val(), $('#sliceByL2').val(),
         $('#rollUpPercentage').val(), $('#cropFaces').is(':checked'),
         $('#startExpanded').is(':checked')
