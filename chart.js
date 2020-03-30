@@ -266,12 +266,20 @@ function mapL1SliceToJQueryElements(l1_slice_faces, slice_by_l2, options) {
     sortEntriesByValueListLen
   );
 
+  let sampled_ids = new Set();
+
   function renderL2Slice(l2_slice) {
     let [l2_slice_name, l2_slice_faces] = l2_slice;
     let l2_slice_seconds = facesToSeconds(l2_slice_faces);
 
     let sampleAndRenderVideos = function() {
-      let sampled_faces = _.sampleSize(l2_slice_faces, 10);
+      let sample_size = 10;
+      let sample_domain = l2_slice_faces.filter(f => !sampled_ids.has(f.id));
+      if (sample_domain.length == 0) {
+        console.log('No more faces to sample!');
+      }
+      let sampled_faces = (sample_domain.length > sample_size) ? _.sampleSize(sample_domain, sample_size) : sample_domain;
+      sampled_faces.forEach(f => sampled_ids.add(f.id));
       return sampled_faces.map(getFaceToJQueryElementMapper(options.crop_faces));
     };
 
