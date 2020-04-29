@@ -227,7 +227,7 @@ function getSliceByVideoPropertyReducer(video_property) {
 
 
 function sliceByClusterIdReducer(acc, face) {
-  let k = `Cluster ${face.cluster_id}`;
+  let k = `C-${face.cluster_id}`;
   if (acc.hasOwnProperty(k)) {
     acc[k].push(face);
   } else {
@@ -237,7 +237,7 @@ function sliceByClusterIdReducer(acc, face) {
 }
 
 
-function sliceFaceList(faces, slice_by) {
+function sliceFaceList(faces, slice_by, slices_to_exclude) {
   if (slice_by == '') {
     slices = {'': faces};
   } else if (slice_by == 'cluster') {
@@ -245,6 +245,9 @@ function sliceFaceList(faces, slice_by) {
   } else {
     slices = faces.reduce(getSliceByVideoPropertyReducer(slice_by), {});
   }
+  slices_to_exclude.forEach(x => {
+    delete slices[x];
+  });
   return slices;
 }
 
@@ -261,7 +264,7 @@ function mapL1SliceToJQueryElements(l1_slice_faces, slice_by_l2, options) {
   let n_faces_in_l1_slice = l1_slice_faces.length;
   let min_faces_in_l2_slice = options.roll_up_percentage / 100 * n_faces_in_l1_slice;
 
-  let l2_slices = sliceFaceList(l1_slice_faces, slice_by_l2);
+  let l2_slices = sliceFaceList(l1_slice_faces, slice_by_l2, options.slices_to_exclude);
   let l2_slices_arr = Object.entries(l2_slices).sort(
     sortEntriesByValueListLen
   );
@@ -446,14 +449,22 @@ function renderBarChart(div_id, faces) {
 }
 
 
+function parseSlicesToExclude(s) {
+  return s.split(',').map(x => $.trim(x)).filter(x => x.length > 0);
+}
+
+
 function render(div_id, faces, slice_by_l1, slice_by_l2,
-                roll_up_percentage, crop_faces, start_expanded) {
+                roll_up_percentage, crop_faces, start_expanded,
+                slices_to_exclude) {
   $(div_id).empty();
+  let slices_to_exclude_arr = parseSlicesToExclude(slices_to_exclude);
+
   let n_faces_in_total = faces.length;
   let min_faces_in_l1_slice = roll_up_percentage / 100 * n_faces_in_total;
 
   // Do the slicing (split into groups by slice_by)
-  let l1_slices = sliceFaceList(faces, slice_by_l1);
+  let l1_slices = sliceFaceList(faces, slice_by_l1, slices_to_exclude_arr);
   let l1_slices_arr = Object.entries(l1_slices).sort(
     sortEntriesByValueListLen
   );
@@ -500,7 +511,8 @@ function render(div_id, faces, slice_by_l1, slice_by_l2,
                   crop_faces: crop_faces,
                   n_faces_in_total: n_faces_in_total,
                   l1_slice_name: l1_slice_name,
-                  l1_slice_color: l1_slice_color
+                  l1_slice_color: l1_slice_color,
+                  slices_to_exclude: slices_to_exclude_arr
                 }));
               action_is_show = true;
             }
